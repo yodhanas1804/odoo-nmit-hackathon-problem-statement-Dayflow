@@ -11,10 +11,27 @@ async function request(path, options = {}) {
 
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
-    throw new Error(body.detail || "Request failed");
+    throw new Error(formatApiError(body.detail));
   }
 
   return response.json();
+}
+
+function formatApiError(detail) {
+  if (!detail) return "Request failed";
+  if (typeof detail === "string") return detail;
+
+  if (Array.isArray(detail)) {
+    return detail
+      .map((item) => {
+        if (typeof item === "string") return item;
+        const field = Array.isArray(item.loc) ? item.loc.filter((part) => part !== "body").join(".") : "";
+        return field ? `${field}: ${item.msg}` : item.msg || "Invalid request";
+      })
+      .join("; ");
+  }
+
+  return detail.message || detail.msg || "Request failed";
 }
 
 export function getHealth() {
