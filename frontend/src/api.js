@@ -88,3 +88,27 @@ export function getMyAttendance(token) {
 export function getAdminAttendance(token) {
   return request("/admin/attendance?days=7", { token });
 }
+
+export function createLeaveRequest(token, payload) {
+  return request("/leaves", {
+    method: "POST",
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
+export function getMyLeaves(token) {
+  return request("/leaves/me", { token });
+}
+
+export function getAdminLeaves(token) {
+  return request("/admin/leaves", { token });
+}
+
+export function updateAdminLeave(token, leaveId, payload) {
+  return request(`/admin/leaves/${leaveId}`, {
+    method: "PATCH",
+    token,
+    body: JSON.stringify(payload),
+  });
+}

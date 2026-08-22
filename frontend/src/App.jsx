@@ -1,15 +1,19 @@
 import { useEffect, useState } from "react";
-import { Activity, AlertCircle, CheckCircle2, Clock, LogOut, Save } from "lucide-react";
+import { Activity, AlertCircle, CheckCircle2, Clock, LogOut, Save, Send } from "lucide-react";
 import {
   checkIn,
   checkOut,
+  createLeaveRequest,
   getAdminAttendance,
+  getAdminLeaves,
   getAdminProfiles,
   getHealth,
   getMyAttendance,
+  getMyLeaves,
   getMyProfile,
   login,
   signup,
+  updateAdminLeave,
   updateAdminProfile,
   updateMyProfile,
 } from "./api";
@@ -20,6 +24,13 @@ const emptyAuthForm = {
   email: "",
   password: "",
   role: "EMPLOYEE",
+};
+
+const emptyLeaveForm = {
+  leave_type: "PAID",
+  start_date: "",
+  end_date: "",
+  remarks: "",
 };
 
 const editableEmployeeFields = ["address", "phone", "profile_picture_url"];
@@ -58,6 +69,9 @@ function App() {
   const [adminProfiles, setAdminProfiles] = useState([]);
   const [attendance, setAttendance] = useState([]);
   const [adminAttendance, setAdminAttendance] = useState([]);
+  const [leaveForm, setLeaveForm] = useState(emptyLeaveForm);
+  const [leaves, setLeaves] = useState([]);
+  const [adminLeaves, setAdminLeaves] = useState([]);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState("");
   const [adminForm, setAdminForm] = useState(compactProfile());
   const [error, setError] = useState("");
@@ -75,9 +89,11 @@ function App() {
     if (!auth) return;
     loadProfile();
     loadAttendance();
+    loadLeaves();
     if (auth.user.role === "ADMIN") {
       loadAdminProfiles();
       loadAdminAttendance();
+      loadAdminLeaves();
     }
   }, [auth]);
 
@@ -125,6 +141,16 @@ function App() {
     setAdminAttendance(records);
   }
 
+  async function loadLeaves() {
+    const records = await getMyLeaves(auth.access_token);
+    setLeaves(records);
+  }
+
+  async function loadAdminLeaves() {
+    const records = await getAdminLeaves(auth.access_token);
+    setAdminLeaves(records);
+  }
+
   async function handleAttendanceAction(action) {
     setError("");
     setNotice("");
@@ -133,6 +159,37 @@ function App() {
       setNotice(saved.check_out ? "Checked out for today" : "Checked in for today");
       await loadAttendance();
       if (isAdmin) await loadAdminAttendance();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function submitLeaveRequest(event) {
+    event.preventDefault();
+    setError("");
+    setNotice("");
+    try {
+      await createLeaveRequest(auth.access_token, leaveForm);
+      setLeaveForm(emptyLeaveForm);
+      setNotice("Leave request submitted");
+      await loadLeaves();
+      if (isAdmin) await loadAdminLeaves();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function decideLeave(leaveId, status, adminComment) {
+    setError("");
+    setNotice("");
+    try {
+      await updateAdminLeave(auth.access_token, leaveId, {
+        status,
+        admin_comment: adminComment,
+      });
+      setNotice(`Leave request ${status.toLowerCase()}`);
+      await loadAdminLeaves();
+      await loadLeaves();
     } catch (err) {
       setError(err.message);
     }
@@ -181,6 +238,9 @@ function App() {
     setAdminProfiles([]);
     setAttendance([]);
     setAdminAttendance([]);
+    setLeaveForm(emptyLeaveForm);
+    setLeaves([]);
+    setAdminLeaves([]);
     setNotice("");
     setError("");
   }
@@ -211,10 +271,16 @@ function App() {
                 attendance={attendance}
                 onCheckIn={() => handleAttendanceAction(checkIn)}
                 onCheckOut={() => handleAttendanceAction(checkOut)}
+                leaveForm={leaveForm}
+                setLeaveForm={setLeaveForm}
+                leaves={leaves}
+                submitLeaveRequest={submitLeaveRequest}
                 logout={logout}
                 isAdmin={isAdmin}
                 adminProfiles={adminProfiles}
                 adminAttendance={adminAttendance}
+                adminLeaves={adminLeaves}
+                decideLeave={decideLeave}
                 selectedEmployeeId={selectedEmployeeId}
                 selectAdminProfile={selectAdminProfile}
                 adminForm={adminForm}
@@ -297,6 +363,10 @@ function Dashboard(props) {
     attendance,
     onCheckIn,
     onCheckOut,
+    leaveForm,
+    setLeaveForm,
+    leaves,
+    submitLeaveRequest,
     logout,
     isAdmin,
   } = props;
@@ -329,8 +399,16 @@ function Dashboard(props) {
         onCheckOut={onCheckOut}
       />
 
+      <LeavePanel
+        form={leaveForm}
+        setForm={setLeaveForm}
+        leaves={leaves}
+        onSubmit={submitLeaveRequest}
+      />
+
       {isAdmin && <AdminProfilePanel {...props} />}
       {isAdmin && <AdminAttendancePanel records={props.adminAttendance} />}
+      {isAdmin && <AdminLeavePanel records={props.adminLeaves} onDecision={props.decideLeave} />}
     </div>
   );
 }
@@ -369,6 +447,86 @@ function AdminAttendancePanel({ records }) {
   );
 }
 
+function LeavePanel({ form, setForm, leaves, onSubmit }) {
+  return (
+    <section className="border-t border-slate-200 pt-6">
+      <h3 className="text-base font-semibold tracking-normal">Leave Requests</h3>
+      <form className="mt-4 grid gap-4 lg:grid-cols-4" onSubmit={onSubmit}>
+        <label className="text-sm font-medium">
+          Type
+          <select className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={form.leave_type} onChange={(e) => setForm({ ...form, leave_type: e.target.value })}>
+            <option value="PAID">Paid</option>
+            <option value="SICK">Sick</option>
+            <option value="UNPAID">Unpaid</option>
+          </select>
+        </label>
+        <Input label="Start Date" type="date" value={form.start_date} onChange={(value) => setForm({ ...form, start_date: value })} required />
+        <Input label="End Date" type="date" value={form.end_date} onChange={(value) => setForm({ ...form, end_date: value })} required />
+        <Input label="Remarks" value={form.remarks} onChange={(value) => setForm({ ...form, remarks: value })} />
+        <div className="flex items-end">
+          <button className="inline-flex items-center gap-2 rounded-md bg-slate-950 px-4 py-2 text-sm font-medium text-white" type="submit"><Send size={16} /> Apply</button>
+        </div>
+      </form>
+      <LeaveTable records={leaves} emptyText="No leave requests yet." />
+    </section>
+  );
+}
+
+function AdminLeavePanel({ records, onDecision }) {
+  const [comments, setComments] = useState({});
+
+  return (
+    <section className="border-t border-slate-200 pt-6">
+      <h3 className="text-base font-semibold tracking-normal">Admin Leave Approvals</h3>
+      <div className="mt-4 overflow-x-auto rounded-md border border-slate-200">
+        <table className="w-full min-w-[860px] border-collapse text-left text-sm">
+          <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+            <tr>
+              <th className="px-3 py-2 font-medium">Employee ID</th>
+              <th className="px-3 py-2 font-medium">Type</th>
+              <th className="px-3 py-2 font-medium">Dates</th>
+              <th className="px-3 py-2 font-medium">Remarks</th>
+              <th className="px-3 py-2 font-medium">Status</th>
+              <th className="px-3 py-2 font-medium">Comment</th>
+              <th className="px-3 py-2 font-medium">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {records.length ? (
+              records.map((record) => {
+                const comment = comments[record.id] ?? record.admin_comment ?? "";
+                const closed = record.status !== "PENDING";
+                return (
+                  <tr key={record.id} className="border-t border-slate-200 align-top">
+                    <td className="px-3 py-2">{record.employee_id}</td>
+                    <td className="px-3 py-2">{record.leave_type}</td>
+                    <td className="px-3 py-2">{record.start_date} to {record.end_date}</td>
+                    <td className="px-3 py-2">{record.remarks || "None"}</td>
+                    <td className="px-3 py-2">{record.status}</td>
+                    <td className="px-3 py-2">
+                      <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={comment} onChange={(e) => setComments({ ...comments, [record.id]: e.target.value })} disabled={closed} />
+                    </td>
+                    <td className="px-3 py-2">
+                      <div className="flex gap-2">
+                        <button className="rounded-md bg-emerald-700 px-3 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-slate-300" type="button" disabled={closed} onClick={() => onDecision(record.id, "APPROVED", comment)}>Approve</button>
+                        <button className="rounded-md bg-red-700 px-3 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-slate-300" type="button" disabled={closed} onClick={() => onDecision(record.id, "REJECTED", comment)}>Reject</button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
+            ) : (
+              <tr>
+                <td className="px-3 py-4 text-slate-600" colSpan={7}>No leave requests yet.</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
 function AdminProfilePanel({ adminProfiles, selectedEmployeeId, selectAdminProfile, adminForm, setAdminForm, saveAdminProfile }) {
   return (
     <form className="border-t border-slate-200 pt-6" onSubmit={saveAdminProfile}>
@@ -389,11 +547,11 @@ function AdminProfilePanel({ adminProfiles, selectedEmployeeId, selectAdminProfi
   );
 }
 
-function Input({ label, value, onChange }) {
+function Input({ label, value, onChange, type = "text", required = false }) {
   return (
     <label className="text-sm font-medium capitalize">
       {label}
-      <input className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm font-normal normal-case" value={value} onChange={(e) => onChange(e.target.value)} />
+      <input className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm font-normal normal-case" type={type} value={value} onChange={(e) => onChange(e.target.value)} required={required} />
     </label>
   );
 }
@@ -438,6 +596,43 @@ function AttendanceTable({ records, showEmployee = false, emptyText }) {
               <td className="px-3 py-4 text-slate-600" colSpan={showEmployee ? 5 : 4}>
                 {emptyText}
               </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function LeaveTable({ records, emptyText }) {
+  return (
+    <div className="mt-4 overflow-x-auto rounded-md border border-slate-200">
+      <table className="w-full min-w-[720px] border-collapse text-left text-sm">
+        <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+          <tr>
+            <th className="px-3 py-2 font-medium">Type</th>
+            <th className="px-3 py-2 font-medium">Start</th>
+            <th className="px-3 py-2 font-medium">End</th>
+            <th className="px-3 py-2 font-medium">Remarks</th>
+            <th className="px-3 py-2 font-medium">Status</th>
+            <th className="px-3 py-2 font-medium">Admin Comment</th>
+          </tr>
+        </thead>
+        <tbody>
+          {records.length ? (
+            records.map((record) => (
+              <tr key={record.id} className="border-t border-slate-200">
+                <td className="px-3 py-2">{record.leave_type}</td>
+                <td className="px-3 py-2">{record.start_date}</td>
+                <td className="px-3 py-2">{record.end_date}</td>
+                <td className="px-3 py-2">{record.remarks || "None"}</td>
+                <td className="px-3 py-2">{record.status}</td>
+                <td className="px-3 py-2">{record.admin_comment || "None"}</td>
+              </tr>
+            ))
+          ) : (
+            <tr>
+              <td className="px-3 py-4 text-slate-600" colSpan={6}>{emptyText}</td>
             </tr>
           )}
         </tbody>

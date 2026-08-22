@@ -20,6 +20,18 @@ class AttendanceStatus(str, Enum):
     LEAVE = "LEAVE"
 
 
+class LeaveType(str, Enum):
+    PAID = "PAID"
+    SICK = "SICK"
+    UNPAID = "UNPAID"
+
+
+class LeaveStatus(str, Enum):
+    PENDING = "PENDING"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+
+
 class User(Base):
     __tablename__ = "users"
 
@@ -56,3 +68,17 @@ class Attendance(Base):
     check_in: Mapped[datetime] = mapped_column(DateTime)
     check_out: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     status: Mapped[str] = mapped_column(String(20), default=AttendanceStatus.PRESENT.value)
+
+
+class LeaveRequest(Base):
+    __tablename__ = "leave_requests"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    employee_id: Mapped[str] = mapped_column(String(32), index=True)
+    leave_type: Mapped[str] = mapped_column(String(20))
+    start_date: Mapped[date_type] = mapped_column(Date, index=True)
+    end_date: Mapped[date_type] = mapped_column(Date, index=True)
+    remarks: Mapped[str] = mapped_column(Text, default="")
+    status: Mapped[str] = mapped_column(String(20), default=LeaveStatus.PENDING.value)
+    admin_comment: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

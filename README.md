@@ -133,9 +133,19 @@ Dayflow is a planned Human Resource Management System for the Odoo NMIT hackatho
 - Admins can view recent attendance for all employees.
 - Frontend attendance actions and recent attendance tables added.
 
+## Phase 5 Status
+
+- Leave request schema added.
+- Employees can create paid, sick, and unpaid leave requests.
+- New leave requests are created with `PENDING` status.
+- Employees can view their own leave requests and approval status.
+- Admins can view all leave requests.
+- Admins can approve or reject leave requests with comments.
+- Backend authorization enforces employee and admin leave access rules.
+
 ## Next Phase
 
-Phase 5 will add leave management.
+Phase 6 will add payroll.
 
 ## Local Development
 
@@ -170,6 +180,10 @@ POST /attendance/check-in
 POST /attendance/check-out
 GET /attendance/me
 GET /admin/attendance
+POST /leaves
+GET /leaves/me
+GET /admin/leaves
+PATCH /admin/leaves/{leave_id}
 ```
 
 ### Frontend

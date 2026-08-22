@@ -3,7 +3,7 @@ from typing import Optional
 
 from pydantic import BaseModel, EmailStr, Field
 
-from .models import AttendanceStatus, UserRole
+from .models import AttendanceStatus, LeaveStatus, LeaveType, UserRole
 
 
 class UserCreate(BaseModel):
@@ -72,5 +72,31 @@ class AttendanceRead(BaseModel):
     check_in: datetime
     check_out: Optional[datetime]
     status: AttendanceStatus
+
+    model_config = {"from_attributes": True}
+
+
+class LeaveCreate(BaseModel):
+    leave_type: LeaveType
+    start_date: date
+    end_date: date
+    remarks: str = Field(default="", max_length=1000)
+
+
+class AdminLeaveUpdate(BaseModel):
+    status: LeaveStatus
+    admin_comment: str = Field(default="", max_length=1000)
+
+
+class LeaveRead(BaseModel):
+    id: int
+    employee_id: str
+    leave_type: LeaveType
+    start_date: date
+    end_date: date
+    remarks: str
+    status: LeaveStatus
+    admin_comment: str
+    created_at: datetime
 
     model_config = {"from_attributes": True}
