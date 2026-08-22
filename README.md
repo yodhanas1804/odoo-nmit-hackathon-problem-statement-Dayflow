@@ -118,6 +118,7 @@ Demo records are seeded automatically when the backend starts unless disabled.
 ```text
 Employee: employee.dayflow@example.com / password123
 Admin: admin.dayflow@example.com / password123
+Dummy Admin Password: password123
 ```
 
 Set `SEED_DEMO_DATA=false` to disable automatic demo data.
