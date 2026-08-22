@@ -7,6 +7,7 @@ from .config import settings
 from .database import Base, engine
 from .leaves import router as leaves_router
 from .models import User
+from .payroll import router as payroll_router
 from .profiles import router as profiles_router
 from .schemas import UserRead
 
@@ -25,6 +26,7 @@ app.include_router(auth_router)
 app.include_router(profiles_router)
 app.include_router(attendance_router)
 app.include_router(leaves_router)
+app.include_router(payroll_router)
 
 
 @app.get("/health")

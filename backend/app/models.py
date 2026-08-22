@@ -2,7 +2,7 @@ from datetime import date as date_type, datetime
 from enum import Enum
 from typing import Optional
 
-from sqlalchemy import Date, DateTime, ForeignKey, String, Text, UniqueConstraint
+from sqlalchemy import Date, DateTime, Float, ForeignKey, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .database import Base
@@ -82,3 +82,14 @@ class LeaveRequest(Base):
     status: Mapped[str] = mapped_column(String(20), default=LeaveStatus.PENDING.value)
     admin_comment: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class Payroll(Base):
+    __tablename__ = "payroll"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    employee_id: Mapped[str] = mapped_column(String(32), unique=True, index=True)
+    basic_salary: Mapped[float] = mapped_column(Float, default=0.0)
+    allowances: Mapped[float] = mapped_column(Float, default=0.0)
+    deductions: Mapped[float] = mapped_column(Float, default=0.0)
+    net_salary: Mapped[float] = mapped_column(Float, default=0.0)

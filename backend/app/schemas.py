@@ -100,3 +100,20 @@ class LeaveRead(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class PayrollUpdate(BaseModel):
+    basic_salary: float = Field(ge=0)
+    allowances: float = Field(ge=0)
+    deductions: float = Field(ge=0)
+
+
+class PayrollRead(BaseModel):
+    id: int
+    employee_id: str
+    basic_salary: float
+    allowances: float
+    deductions: float
+    net_salary: float
+
+    model_config = {"from_attributes": True}

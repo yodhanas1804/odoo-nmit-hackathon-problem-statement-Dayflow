@@ -143,9 +143,19 @@ Dayflow is a planned Human Resource Management System for the Odoo NMIT hackatho
 - Admins can approve or reject leave requests with comments.
 - Backend authorization enforces employee and admin leave access rules.
 
+## Phase 6 Status
+
+- Payroll schema added.
+- Employees can view only their own payroll.
+- Employee payroll access is read-only.
+- Admins can view payroll for all employees.
+- Admins can update salary structure values.
+- Net salary is calculated from basic salary plus allowances minus deductions.
+- Backend authorization enforces payroll access rules.
+
 ## Next Phase
 
-Phase 6 will add payroll.
+Phase 7 will connect all modules into dashboards.
 
 ## Local Development
 
@@ -184,6 +194,9 @@ POST /leaves
 GET /leaves/me
 GET /admin/leaves
 PATCH /admin/leaves/{leave_id}
+GET /payroll/me
+GET /admin/payroll
+PATCH /admin/payroll/{employee_id}
 ```
 
 ### Frontend

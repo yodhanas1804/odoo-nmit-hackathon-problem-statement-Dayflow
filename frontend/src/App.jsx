@@ -6,14 +6,17 @@ import {
   createLeaveRequest,
   getAdminAttendance,
   getAdminLeaves,
+  getAdminPayroll,
   getAdminProfiles,
   getHealth,
   getMyAttendance,
   getMyLeaves,
+  getMyPayroll,
   getMyProfile,
   login,
   signup,
   updateAdminLeave,
+  updateAdminPayroll,
   updateAdminProfile,
   updateMyProfile,
 } from "./api";
@@ -72,6 +75,8 @@ function App() {
   const [leaveForm, setLeaveForm] = useState(emptyLeaveForm);
   const [leaves, setLeaves] = useState([]);
   const [adminLeaves, setAdminLeaves] = useState([]);
+  const [payroll, setPayroll] = useState(null);
+  const [adminPayroll, setAdminPayroll] = useState([]);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState("");
   const [adminForm, setAdminForm] = useState(compactProfile());
   const [error, setError] = useState("");
@@ -90,10 +95,12 @@ function App() {
     loadProfile();
     loadAttendance();
     loadLeaves();
+    loadPayroll();
     if (auth.user.role === "ADMIN") {
       loadAdminProfiles();
       loadAdminAttendance();
       loadAdminLeaves();
+      loadAdminPayroll();
     }
   }, [auth]);
 
@@ -151,6 +158,16 @@ function App() {
     setAdminLeaves(records);
   }
 
+  async function loadPayroll() {
+    const record = await getMyPayroll(auth.access_token);
+    setPayroll(record);
+  }
+
+  async function loadAdminPayroll() {
+    const records = await getAdminPayroll(auth.access_token);
+    setAdminPayroll(records);
+  }
+
   async function handleAttendanceAction(action) {
     setError("");
     setNotice("");
@@ -190,6 +207,19 @@ function App() {
       setNotice(`Leave request ${status.toLowerCase()}`);
       await loadAdminLeaves();
       await loadLeaves();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function saveAdminPayroll(employeeId, payload) {
+    setError("");
+    setNotice("");
+    try {
+      const saved = await updateAdminPayroll(auth.access_token, employeeId, payload);
+      setNotice(`Updated payroll for ${saved.employee_id}`);
+      await loadAdminPayroll();
+      if (employeeId === auth.user.employee_id) await loadPayroll();
     } catch (err) {
       setError(err.message);
     }
@@ -241,6 +271,8 @@ function App() {
     setLeaveForm(emptyLeaveForm);
     setLeaves([]);
     setAdminLeaves([]);
+    setPayroll(null);
+    setAdminPayroll([]);
     setNotice("");
     setError("");
   }
@@ -275,12 +307,15 @@ function App() {
                 setLeaveForm={setLeaveForm}
                 leaves={leaves}
                 submitLeaveRequest={submitLeaveRequest}
+                payroll={payroll}
                 logout={logout}
                 isAdmin={isAdmin}
                 adminProfiles={adminProfiles}
                 adminAttendance={adminAttendance}
                 adminLeaves={adminLeaves}
                 decideLeave={decideLeave}
+                adminPayroll={adminPayroll}
+                saveAdminPayroll={saveAdminPayroll}
                 selectedEmployeeId={selectedEmployeeId}
                 selectAdminProfile={selectAdminProfile}
                 adminForm={adminForm}
@@ -367,6 +402,7 @@ function Dashboard(props) {
     setLeaveForm,
     leaves,
     submitLeaveRequest,
+    payroll,
     logout,
     isAdmin,
   } = props;
@@ -406,9 +442,17 @@ function Dashboard(props) {
         onSubmit={submitLeaveRequest}
       />
 
+      <PayrollPanel payroll={payroll} />
+
       {isAdmin && <AdminProfilePanel {...props} />}
       {isAdmin && <AdminAttendancePanel records={props.adminAttendance} />}
       {isAdmin && <AdminLeavePanel records={props.adminLeaves} onDecision={props.decideLeave} />}
+      {isAdmin && (
+        <AdminPayrollPanel
+          records={props.adminPayroll}
+          onSave={props.saveAdminPayroll}
+        />
+      )}
     </div>
   );
 }
@@ -518,6 +562,93 @@ function AdminLeavePanel({ records, onDecision }) {
             ) : (
               <tr>
                 <td className="px-3 py-4 text-slate-600" colSpan={7}>No leave requests yet.</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+function PayrollPanel({ payroll }) {
+  return (
+    <section className="border-t border-slate-200 pt-6">
+      <h3 className="text-base font-semibold tracking-normal">Payroll</h3>
+      <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Readonly label="Basic Salary" value={formatCurrency(payroll?.basic_salary)} />
+        <Readonly label="Allowances" value={formatCurrency(payroll?.allowances)} />
+        <Readonly label="Deductions" value={formatCurrency(payroll?.deductions)} />
+        <Readonly label="Net Salary" value={formatCurrency(payroll?.net_salary)} />
+      </div>
+    </section>
+  );
+}
+
+function AdminPayrollPanel({ records, onSave }) {
+  const [forms, setForms] = useState({});
+
+  function fieldValue(record, field) {
+    return forms[record.employee_id]?.[field] ?? String(record[field] ?? 0);
+  }
+
+  function updateField(employeeId, field, value) {
+    setForms({
+      ...forms,
+      [employeeId]: {
+        ...forms[employeeId],
+        [field]: value,
+      },
+    });
+  }
+
+  function submitPayroll(event, record) {
+    event.preventDefault();
+    onSave(record.employee_id, {
+      basic_salary: Number(fieldValue(record, "basic_salary")),
+      allowances: Number(fieldValue(record, "allowances")),
+      deductions: Number(fieldValue(record, "deductions")),
+    });
+  }
+
+  return (
+    <section className="border-t border-slate-200 pt-6">
+      <h3 className="text-base font-semibold tracking-normal">Admin Payroll Management</h3>
+      <div className="mt-4 overflow-x-auto rounded-md border border-slate-200">
+        <table className="w-full min-w-[820px] border-collapse text-left text-sm">
+          <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+            <tr>
+              <th className="px-3 py-2 font-medium">Employee ID</th>
+              <th className="px-3 py-2 font-medium">Basic</th>
+              <th className="px-3 py-2 font-medium">Allowances</th>
+              <th className="px-3 py-2 font-medium">Deductions</th>
+              <th className="px-3 py-2 font-medium">Net</th>
+              <th className="px-3 py-2 font-medium">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {records.length ? (
+              records.map((record) => (
+                <tr key={record.employee_id} className="border-t border-slate-200">
+                  <td className="px-3 py-2">{record.employee_id}</td>
+                  <td className="px-3 py-2">
+                    <input className="w-32 rounded-md border border-slate-300 px-3 py-2 text-sm" min="0" step="0.01" type="number" value={fieldValue(record, "basic_salary")} onChange={(event) => updateField(record.employee_id, "basic_salary", event.target.value)} />
+                  </td>
+                  <td className="px-3 py-2">
+                    <input className="w-32 rounded-md border border-slate-300 px-3 py-2 text-sm" min="0" step="0.01" type="number" value={fieldValue(record, "allowances")} onChange={(event) => updateField(record.employee_id, "allowances", event.target.value)} />
+                  </td>
+                  <td className="px-3 py-2">
+                    <input className="w-32 rounded-md border border-slate-300 px-3 py-2 text-sm" min="0" step="0.01" type="number" value={fieldValue(record, "deductions")} onChange={(event) => updateField(record.employee_id, "deductions", event.target.value)} />
+                  </td>
+                  <td className="px-3 py-2">{formatCurrency(record.net_salary)}</td>
+                  <td className="px-3 py-2">
+                    <button className="inline-flex items-center gap-2 rounded-md bg-slate-950 px-4 py-2 text-sm font-medium text-white" type="button" onClick={(event) => submitPayroll(event, record)}><Save size={16} /> Save</button>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td className="px-3 py-4 text-slate-600" colSpan={6}>No payroll records yet.</td>
               </tr>
             )}
           </tbody>
@@ -653,6 +784,13 @@ function formatDateKey(value) {
   const month = String(value.getMonth() + 1).padStart(2, "0");
   const day = String(value.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function formatCurrency(value) {
+  return new Intl.NumberFormat(undefined, {
+    style: "currency",
+    currency: "INR",
+  }).format(Number(value || 0));
 }
 
 export default App;

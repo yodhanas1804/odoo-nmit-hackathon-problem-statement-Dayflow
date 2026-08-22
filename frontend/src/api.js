@@ -112,3 +112,19 @@ export function updateAdminLeave(token, leaveId, payload) {
     body: JSON.stringify(payload),
   });
 }
+
+export function getMyPayroll(token) {
+  return request("/payroll/me", { token });
+}
+
+export function getAdminPayroll(token) {
+  return request("/admin/payroll", { token });
+}
+
+export function updateAdminPayroll(token, employeeId, payload) {
+  return request(`/admin/payroll/${employeeId}`, {
+    method: "PATCH",
+    token,
+    body: JSON.stringify(payload),
+  });
+}
