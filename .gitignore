@@ -1,4 +1,5 @@
 backend/.venv/
+backend/dayflow.db
 backend/__pycache__/
 backend/app/__pycache__/
 frontend/node_modules/

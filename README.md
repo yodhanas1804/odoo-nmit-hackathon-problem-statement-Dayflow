@@ -103,9 +103,19 @@ Dayflow is a planned Human Resource Management System for the Odoo NMIT hackatho
 - Frontend reads `VITE_API_BASE_URL` and calls backend health endpoint.
 - Basic frontend loading/error states added.
 
+## Phase 2 Status
+
+- SQLAlchemy user schema added.
+- Signup and login APIs added with password hashing.
+- JWT bearer authentication added.
+- Employee and admin protected endpoints added.
+- React login/signup UI added.
+- Role-aware dashboard placeholder added.
+- Employee users are blocked from admin-only API access.
+
 ## Next Phase
 
-Phase 2 will add database schema and authentication.
+Phase 3 will add employee profile viewing and editing.
 
 ## Local Development
 
@@ -123,6 +133,15 @@ Backend health endpoint:
 
 ```text
 http://localhost:8000/health
+```
+
+Auth endpoints:
+
+```text
+POST /auth/signup
+POST /auth/login
+GET /users/me
+GET /admin/users/me
 ```
 
 ### Frontend
