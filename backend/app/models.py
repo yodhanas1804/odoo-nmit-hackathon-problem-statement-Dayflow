@@ -32,6 +32,12 @@ class LeaveStatus(str, Enum):
     REJECTED = "REJECTED"
 
 
+class RegistrationStatus(str, Enum):
+    PENDING = "PENDING"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+
+
 class User(Base):
     __tablename__ = "users"
 
@@ -56,6 +62,20 @@ class EmployeeProfile(Base):
     profile_picture_url: Mapped[str] = mapped_column(String(500), default="")
     address: Mapped[str] = mapped_column(Text, default="")
     phone: Mapped[str] = mapped_column(String(40), default="")
+
+
+class RegistrationRequest(Base):
+    __tablename__ = "registration_requests"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    employee_id: Mapped[str] = mapped_column(String(32), index=True)
+    name: Mapped[str] = mapped_column(String(120))
+    email: Mapped[str] = mapped_column(String(255), index=True)
+    password_hash: Mapped[str] = mapped_column(String(255))
+    role: Mapped[str] = mapped_column(String(20), default=UserRole.EMPLOYEE.value)
+    status: Mapped[str] = mapped_column(String(20), default=RegistrationStatus.PENDING.value)
+    admin_comment: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
 class Attendance(Base):

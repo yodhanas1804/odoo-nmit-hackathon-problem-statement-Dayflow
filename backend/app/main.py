@@ -2,6 +2,7 @@ from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .attendance import router as attendance_router
+from .auth import admin_router as registration_admin_router
 from .auth import get_current_user, require_admin, router as auth_router
 from .config import settings
 from .database import Base, SessionLocal, engine
@@ -27,6 +28,7 @@ app.add_middleware(
 )
 
 app.include_router(auth_router)
+app.include_router(registration_admin_router)
 app.include_router(profiles_router)
 app.include_router(attendance_router)
 app.include_router(leaves_router)

@@ -45,6 +45,18 @@ export function signup(payload) {
   });
 }
 
+export function getAdminRegistrations(token) {
+  return request("/admin/registrations", { token });
+}
+
+export function updateAdminRegistration(token, requestId, payload) {
+  return request(`/admin/registrations/${requestId}`, {
+    method: "PATCH",
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
 export function login(payload) {
   return request("/auth/login", {
     method: "POST",

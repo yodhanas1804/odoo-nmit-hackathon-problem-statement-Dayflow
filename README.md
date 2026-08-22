@@ -174,6 +174,8 @@ Dayflow is a planned Human Resource Management System for the Odoo NMIT hackatho
 ## Implemented Features
 
 - JWT-based signup and login.
+- Public signup creates a pending registration request.
+- Admin approval is required before a new account can log in.
 - `EMPLOYEE` and `ADMIN` role-based access control.
 - Employee profile viewing and limited employee editing.
 - Admin employee profile management.
@@ -195,15 +197,19 @@ Admin: admin.dayflow@example.com / password123
 
 ## Demo Flow
 
-1. Login as the employee.
-2. Open Profile and verify employee details.
-3. Open Attendance and check in.
-4. Open Leave and submit a request.
-5. Logout.
-6. Login as the admin.
-7. Open Admin and approve or reject the leave request.
-8. Review attendance and payroll in the Admin dashboard.
-9. Login as the employee again and verify the updated leave status.
+1. Submit a signup request from the Signup form.
+2. Login as the admin.
+3. Open Admin and approve or reject the signup request.
+4. Logout.
+5. Login as the approved employee.
+6. Open Profile and verify employee details.
+7. Open Attendance and check in.
+8. Open Leave and submit a request.
+9. Logout.
+10. Login as the admin.
+11. Open Admin and approve or reject the leave request.
+12. Review attendance and payroll in the Admin dashboard.
+13. Login as the employee again and verify the updated leave status.
 
 ## Local Development
 
@@ -250,6 +256,8 @@ POST /auth/signup
 POST /auth/login
 GET /users/me
 GET /admin/users/me
+GET /admin/registrations
+PATCH /admin/registrations/{request_id}
 GET /profiles/me
 PATCH /profiles/me
 GET /admin/profiles

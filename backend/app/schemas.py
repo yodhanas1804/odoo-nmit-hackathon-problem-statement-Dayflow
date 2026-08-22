@@ -1,9 +1,15 @@
 from datetime import date, datetime
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+import re
 
-from .models import AttendanceStatus, LeaveStatus, LeaveType, UserRole
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+
+from .models import AttendanceStatus, LeaveStatus, LeaveType, RegistrationStatus, UserRole
+
+
+NAME_PATTERN = re.compile(r"^[A-Za-z][A-Za-z .'-]*$")
+EMPLOYEE_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]+$")
 
 
 class UserCreate(BaseModel):
@@ -12,6 +18,20 @@ class UserCreate(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8)
     role: UserRole = UserRole.EMPLOYEE
+
+    @field_validator("employee_id")
+    @classmethod
+    def validate_employee_id(cls, value: str) -> str:
+        if not EMPLOYEE_ID_PATTERN.fullmatch(value):
+            raise ValueError("Employee ID can contain only letters, numbers, underscores, and hyphens")
+        return value
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, value: str) -> str:
+        if not NAME_PATTERN.fullmatch(value):
+            raise ValueError("Name can contain only letters, spaces, periods, apostrophes, and hyphens")
+        return value
 
 
 class UserLogin(BaseModel):
@@ -34,6 +54,24 @@ class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserRead
+
+
+class RegistrationRequestRead(BaseModel):
+    id: int
+    employee_id: str
+    name: str
+    email: EmailStr
+    role: UserRole
+    status: RegistrationStatus
+    admin_comment: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class AdminRegistrationDecision(BaseModel):
+    status: RegistrationStatus
+    admin_comment: str = Field(default="", max_length=1000)
 
 
 class ProfileRead(BaseModel):

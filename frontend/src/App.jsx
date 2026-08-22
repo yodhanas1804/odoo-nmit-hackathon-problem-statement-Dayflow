@@ -20,6 +20,7 @@ import {
   getAdminLeaves,
   getAdminPayroll,
   getAdminProfiles,
+  getAdminRegistrations,
   getHealth,
   getMyAttendance,
   getMyLeaves,
@@ -30,6 +31,7 @@ import {
   updateAdminLeave,
   updateAdminPayroll,
   updateAdminProfile,
+  updateAdminRegistration,
   updateMyProfile,
 } from "./api";
 
@@ -82,6 +84,7 @@ function App() {
   const [profile, setProfile] = useState(null);
   const [profileForm, setProfileForm] = useState(compactProfile());
   const [adminProfiles, setAdminProfiles] = useState([]);
+  const [adminRegistrations, setAdminRegistrations] = useState([]);
   const [attendance, setAttendance] = useState([]);
   const [adminAttendance, setAdminAttendance] = useState([]);
   const [leaveForm, setLeaveForm] = useState(emptyLeaveForm);
@@ -114,6 +117,7 @@ function App() {
       if (auth.user.role === "ADMIN") {
         await Promise.all([
           loadAdminProfiles(),
+          loadAdminRegistrations(),
           loadAdminAttendance(),
           loadAdminLeaves(),
           loadAdminPayroll(),
@@ -135,6 +139,12 @@ function App() {
 
     try {
       const nextAuth = await action(payload);
+      if (mode === "signup") {
+        setNotice("Registration submitted. An admin must approve it before you can log in.");
+        setAuthForm(emptyAuthForm);
+        setMode("login");
+        return;
+      }
       localStorage.setItem("dayflowAuth", JSON.stringify(nextAuth));
       setAuth(nextAuth);
       setAuthForm(emptyAuthForm);
@@ -156,6 +166,11 @@ function App() {
       setSelectedEmployeeId(profiles[0].employee_id);
       setAdminForm(compactProfile(profiles[0]));
     }
+  }
+
+  async function loadAdminRegistrations() {
+    const records = await getAdminRegistrations(auth.access_token);
+    setAdminRegistrations(records);
   }
 
   async function loadAttendance() {
@@ -232,6 +247,23 @@ function App() {
     }
   }
 
+  async function decideRegistration(requestId, status, adminComment) {
+    setError("");
+    setNotice("");
+    try {
+      await updateAdminRegistration(auth.access_token, requestId, {
+        status,
+        admin_comment: adminComment,
+      });
+      setNotice(`Registration request ${status.toLowerCase()}`);
+      await loadAdminRegistrations();
+      await loadAdminProfiles();
+      await loadAdminPayroll();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
   async function saveAdminPayroll(employeeId, payload) {
     setError("");
     setNotice("");
@@ -286,6 +318,7 @@ function App() {
     setAuth(null);
     setProfile(null);
     setAdminProfiles([]);
+    setAdminRegistrations([]);
     setAttendance([]);
     setAdminAttendance([]);
     setLeaveForm(emptyLeaveForm);
@@ -331,6 +364,8 @@ function App() {
                 logout={logout}
                 isAdmin={isAdmin}
                 adminProfiles={adminProfiles}
+                adminRegistrations={adminRegistrations}
+                decideRegistration={decideRegistration}
                 adminAttendance={adminAttendance}
                 adminLeaves={adminLeaves}
                 decideLeave={decideLeave}
@@ -392,13 +427,9 @@ function AuthForm({ mode, setMode, form, setForm, onSubmit }) {
         <button type="button" className={`rounded px-3 py-1.5 text-sm ${mode === "signup" ? "bg-slate-950 text-white" : ""}`} onClick={() => setMode("signup")}>Signup</button>
       </div>
       {mode === "signup" && (
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2">
           <input className="rounded-md border border-slate-300 px-3 py-2 text-sm" placeholder="Employee ID" value={form.employee_id} onChange={(e) => setForm({ ...form, employee_id: e.target.value })} />
           <input className="rounded-md border border-slate-300 px-3 py-2 text-sm" placeholder="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-          <select className="rounded-md border border-slate-300 px-3 py-2 text-sm" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
-            <option value="EMPLOYEE">Employee</option>
-            <option value="ADMIN">Admin</option>
-          </select>
         </div>
       )}
       <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" placeholder="Email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
@@ -428,6 +459,7 @@ function Dashboard(props) {
   } = props;
   const [activeSection, setActiveSection] = useState("overview");
   const pendingLeaves = props.adminLeaves?.filter((leave) => leave.status === "PENDING").length || 0;
+  const pendingRegistrations = props.adminRegistrations?.filter((item) => item.status === "PENDING").length || 0;
   const todayAttendance = attendance.find((record) => record.date === formatDateKey(new Date()));
   const modules = [
     { id: "overview", label: "Overview", icon: Activity },
@@ -456,7 +488,7 @@ function Dashboard(props) {
           <DashboardCard title="Attendance" value={todayAttendance ? "Checked in today" : "No check-in today"} detail={`${attendance.length} recent records`} icon={Clock} onClick={() => setActiveSection("attendance")} />
           <DashboardCard title="Leave" value={`${leaves.length} requests`} detail={isAdmin ? `${pendingLeaves} pending approvals` : "Track approval status"} icon={FileText} onClick={() => setActiveSection("leaves")} />
           <DashboardCard title="Payroll" value={formatCurrency(payroll?.net_salary)} detail="Current net salary" icon={Wallet} onClick={() => setActiveSection("payroll")} />
-          {isAdmin && <DashboardCard title="Admin" value={`${props.adminProfiles.length} employees`} detail="Profiles, attendance, leave, payroll" icon={Users} onClick={() => setActiveSection("admin")} />}
+          {isAdmin && <DashboardCard title="Admin" value={`${pendingRegistrations} signup approvals`} detail={`${props.adminProfiles.length} employees`} icon={Users} onClick={() => setActiveSection("admin")} />}
         </div>
       )}
 
@@ -490,6 +522,10 @@ function Dashboard(props) {
 
       {isAdmin && activeSection === "admin" && (
         <div className="space-y-6">
+          <AdminRegistrationPanel
+            records={props.adminRegistrations}
+            onDecision={props.decideRegistration}
+          />
           <AdminProfilePanel {...props} />
           <AdminAttendancePanel records={props.adminAttendance} />
           <AdminLeavePanel records={props.adminLeaves} onDecision={props.decideLeave} />
@@ -656,6 +692,59 @@ function AdminLeavePanel({ records, onDecision }) {
             ) : (
               <tr>
                 <td className="px-3 py-4 text-slate-600" colSpan={7}>No leave requests yet.</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+function AdminRegistrationPanel({ records, onDecision }) {
+  const [comments, setComments] = useState({});
+
+  return (
+    <section className="border-t border-slate-200 pt-6">
+      <h3 className="text-base font-semibold tracking-normal">Signup Approvals</h3>
+      <div className="mt-4 overflow-x-auto rounded-md border border-slate-200">
+        <table className="w-full min-w-[820px] border-collapse text-left text-sm">
+          <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+            <tr>
+              <th className="px-3 py-2 font-medium">Employee ID</th>
+              <th className="px-3 py-2 font-medium">Name</th>
+              <th className="px-3 py-2 font-medium">Email</th>
+              <th className="px-3 py-2 font-medium">Status</th>
+              <th className="px-3 py-2 font-medium">Comment</th>
+              <th className="px-3 py-2 font-medium">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {records.length ? (
+              records.map((record) => {
+                const comment = comments[record.id] ?? record.admin_comment ?? "";
+                const closed = record.status !== "PENDING";
+                return (
+                  <tr key={record.id} className="border-t border-slate-200 align-top">
+                    <td className="px-3 py-2">{record.employee_id}</td>
+                    <td className="px-3 py-2">{record.name}</td>
+                    <td className="px-3 py-2">{record.email}</td>
+                    <td className="px-3 py-2">{record.status}</td>
+                    <td className="px-3 py-2">
+                      <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={comment} onChange={(e) => setComments({ ...comments, [record.id]: e.target.value })} disabled={closed} />
+                    </td>
+                    <td className="px-3 py-2">
+                      <div className="flex gap-2">
+                        <button className="rounded-md bg-emerald-700 px-3 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-slate-300" type="button" disabled={closed} onClick={() => onDecision(record.id, "APPROVED", comment)}>Approve</button>
+                        <button className="rounded-md bg-red-700 px-3 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-slate-300" type="button" disabled={closed} onClick={() => onDecision(record.id, "REJECTED", comment)}>Reject</button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
+            ) : (
+              <tr>
+                <td className="px-3 py-4 text-slate-600" colSpan={6}>No signup requests yet.</td>
               </tr>
             )}
           </tbody>
