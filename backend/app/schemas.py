@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from typing import Optional
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 from .models import AttendanceStatus, LeaveStatus, LeaveType, UserRole
 
@@ -53,6 +53,8 @@ class ProfileRead(BaseModel):
 
 
 class EmployeeProfileUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     address: Optional[str] = None
     phone: Optional[str] = None
     profile_picture_url: Optional[str] = None

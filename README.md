@@ -217,6 +217,14 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
+Backend tests:
+
+```bash
+cd backend
+.venv\Scripts\activate
+pytest
+```
+
 Backend environment variables:
 
 ```text
