@@ -10,6 +10,8 @@ from .models import AttendanceStatus, LeaveStatus, LeaveType, RegistrationStatus
 
 NAME_PATTERN = re.compile(r"^[A-Za-z][A-Za-z .'-]*$")
 EMPLOYEE_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]+$")
+PROFILE_IMAGE_DATA_PATTERN = re.compile(r"^data:image/(png|jpeg|jpg|webp|gif);base64,[A-Za-z0-9+/=]+$")
+PROFILE_IMAGE_MAX_CHARS = 1_400_000
 
 
 class UserCreate(BaseModel):
@@ -101,14 +103,41 @@ class ProfileRead(BaseModel):
     profile_picture_url: str
     address: str
     phone: str
+    father_name: str
+    mother_name: str
 
 
 class EmployeeProfileUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    name: Optional[str] = Field(default=None, min_length=2, max_length=120)
     address: Optional[str] = None
     phone: Optional[str] = None
     profile_picture_url: Optional[str] = None
+    father_name: Optional[str] = Field(default=None, max_length=120)
+    mother_name: Optional[str] = Field(default=None, max_length=120)
+
+    @field_validator("name", "father_name", "mother_name")
+    @classmethod
+    def validate_optional_names(cls, value: Optional[str]) -> Optional[str]:
+        if value in (None, ""):
+            return value
+        if not NAME_PATTERN.fullmatch(value):
+            raise ValueError("Name can contain only letters, spaces, periods, apostrophes, and hyphens")
+        return value
+
+    @field_validator("profile_picture_url")
+    @classmethod
+    def validate_profile_picture(cls, value: Optional[str]) -> Optional[str]:
+        if value in (None, ""):
+            return value
+        if len(value) > PROFILE_IMAGE_MAX_CHARS:
+            raise ValueError("Profile picture must be 1 MB or smaller")
+        if value.startswith("data:image/") and not PROFILE_IMAGE_DATA_PATTERN.fullmatch(value):
+            raise ValueError("Profile picture must be a valid JPG, PNG, WebP, or GIF image")
+        if not value.startswith("data:image/") and not value.startswith(("https://", "http://")):
+            raise ValueError("Profile picture must be an uploaded image or an http(s) URL")
+        return value
 
 
 class AdminProfileUpdate(EmployeeProfileUpdate):
@@ -167,6 +196,12 @@ class PayrollRead(BaseModel):
     basic_salary: float
     allowances: float
     deductions: float
+    leave_deduction: float = 0
     net_salary: float
+    paid_leave_allowance: int = 2
+    sick_leave_allowance: int = 1
+    paid_leave_used: int = 0
+    sick_leave_used: int = 0
+    unpaid_leave_days: int = 0
 
     model_config = {"from_attributes": True}

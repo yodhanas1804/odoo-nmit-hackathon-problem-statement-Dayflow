@@ -85,6 +85,23 @@ def test_signup_requires_admin_approval_before_login(client, db_session):
     assert duplicate.status_code == 409
 
 
+def test_public_signup_cannot_create_admin_registration(client):
+    created = signup(
+        client,
+        employee_id="EMP106",
+        email="employee106@example.com",
+        role="ADMIN",
+    )
+    assert created["role"] == "EMPLOYEE"
+    assert created["status"] == "PENDING"
+
+    login = client.post(
+        "/auth/login",
+        json={"email": "employee106@example.com", "password": "password123"},
+    )
+    assert login.status_code == 401
+
+
 def test_admin_can_reject_signup_without_creating_account(client, db_session):
     admin = create_user(
         db_session,

@@ -60,9 +60,11 @@ class EmployeeProfile(Base):
     job_details: Mapped[str] = mapped_column(Text, default="")
     salary_structure: Mapped[str] = mapped_column(Text, default="")
     documents_metadata: Mapped[str] = mapped_column(Text, default="")
-    profile_picture_url: Mapped[str] = mapped_column(String(500), default="")
+    profile_picture_url: Mapped[str] = mapped_column(Text, default="")
     address: Mapped[str] = mapped_column(Text, default="")
     phone: Mapped[str] = mapped_column(String(40), default="")
+    father_name: Mapped[str] = mapped_column(String(120), default="")
+    mother_name: Mapped[str] = mapped_column(String(120), default="")
 
 
 class RegistrationRequest(Base):

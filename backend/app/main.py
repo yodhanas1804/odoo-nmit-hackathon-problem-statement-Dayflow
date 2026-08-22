@@ -29,6 +29,18 @@ def ensure_runtime_schema() -> None:
             connection.execute(
                 text(f"ALTER TABLE users ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT {default_value}")
             )
+    if "employee_profiles" in inspector.get_table_names():
+        profile_columns = {column["name"] for column in inspector.get_columns("employee_profiles")}
+        missing_profile_columns = {
+            "father_name": "VARCHAR(120) NOT NULL DEFAULT ''",
+            "mother_name": "VARCHAR(120) NOT NULL DEFAULT ''",
+        }
+        with engine.begin() as connection:
+            for column_name, column_definition in missing_profile_columns.items():
+                if column_name not in profile_columns:
+                    connection.execute(
+                        text(f"ALTER TABLE employee_profiles ADD COLUMN {column_name} {column_definition}")
+                    )
 
 
 ensure_runtime_schema()

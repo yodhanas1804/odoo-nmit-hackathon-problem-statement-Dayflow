@@ -139,11 +139,11 @@ export function checkOut(token) {
 }
 
 export function getMyAttendance(token) {
-  return request("/attendance/me?days=7", { token });
+  return request("/attendance/me?days=31", { token });
 }
 
 export function getAdminAttendance(token) {
-  return request("/admin/attendance?days=7", { token });
+  return request("/admin/attendance?days=31", { token });
 }
 
 export function createLeaveRequest(token, payload) {

@@ -10,6 +10,7 @@ from .models import Attendance, AttendanceStatus, User
 from .schemas import AttendanceRead
 
 router = APIRouter(tags=["attendance"])
+FULL_DAY_HOURS = 7
 
 
 def today_record(db: Session, employee_id: str) -> Optional[Attendance]:
@@ -52,6 +53,9 @@ def check_out(
         raise HTTPException(status_code=409, detail="Already checked out today")
 
     attendance.check_out = datetime.utcnow()
+    worked_hours = (attendance.check_out - attendance.check_in).total_seconds() / 3600
+    if worked_hours < FULL_DAY_HOURS:
+        attendance.status = AttendanceStatus.HALF_DAY.value
     db.commit()
     db.refresh(attendance)
     return attendance

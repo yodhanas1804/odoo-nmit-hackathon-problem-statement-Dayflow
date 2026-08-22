@@ -54,10 +54,10 @@ def seed_demo_data(db: Session) -> None:
         phone="+91 90000 00002",
         address="Mysuru",
     )
-    ensure_payroll(db, employee.employee_id, basic_salary=45000, allowances=8000, deductions=2500)
-    ensure_payroll(db, admin.employee_id, basic_salary=70000, allowances=12000, deductions=5000)
-    ensure_attendance(db, employee.employee_id)
-    ensure_leave_request(db, employee.employee_id)
+    fill_existing_user_profiles(db)
+    fill_existing_user_payroll(db)
+    fill_existing_user_attendance(db)
+    fill_existing_user_leaves(db)
     db.commit()
 
 
@@ -102,6 +102,53 @@ def ensure_profile(db: Session, user: User, **values: str) -> None:
     for field, value in values.items():
         if not getattr(profile, field):
             setattr(profile, field, value)
+    if profile.profile_picture_url.startswith("https://api.dicebear.com/"):
+        profile.profile_picture_url = ""
+
+
+def fill_existing_user_profiles(db: Session) -> None:
+    for index, user in enumerate(db.query(User).order_by(User.created_at.asc()).all(), start=1):
+        ensure_profile(
+            db,
+            user,
+            personal_details=f"Sample profile details for {user.name}",
+            job_details="HR Administrator" if user.role == UserRole.ADMIN.value else "Operations Associate",
+            salary_structure="Monthly salary with basic pay, allowances, deductions, and leave adjustments",
+            documents_metadata="Aadhaar, PAN, resume, and bank details verified",
+            address=f"Sample Address {index}, Bengaluru, Karnataka",
+            phone=f"+91 90000 00{index:03d}",
+            father_name=f"Father {index}",
+            mother_name=f"Mother {index}",
+        )
+
+
+def fill_existing_user_payroll(db: Session) -> None:
+    for index, user in enumerate(db.query(User).order_by(User.created_at.asc()).all(), start=1):
+        if user.role == UserRole.ADMIN.value:
+            basic_salary = 70000 + (index * 1000)
+            allowances = 12000
+            deductions = 5000
+        else:
+            basic_salary = 42000 + (index * 1500)
+            allowances = 8000
+            deductions = 2500
+        ensure_payroll(
+            db,
+            user.employee_id,
+            basic_salary=basic_salary,
+            allowances=allowances,
+            deductions=deductions,
+        )
+
+
+def fill_existing_user_attendance(db: Session) -> None:
+    for user in db.query(User).order_by(User.created_at.asc()).all():
+        ensure_attendance(db, user.employee_id)
+
+
+def fill_existing_user_leaves(db: Session) -> None:
+    for user in db.query(User).order_by(User.created_at.asc()).all():
+        ensure_leave_request(db, user.employee_id)
 
 
 def ensure_payroll(
@@ -127,41 +174,72 @@ def ensure_payroll(
 
 
 def ensure_attendance(db: Session, employee_id: str) -> None:
-    yesterday = date.today() - timedelta(days=1)
-    existing = (
-        db.query(Attendance)
-        .filter(Attendance.employee_id == employee_id, Attendance.date == yesterday)
-        .first()
-    )
-    if existing:
-        return
-
-    check_in = datetime.combine(yesterday, datetime.min.time()).replace(hour=9, minute=15)
-    check_out = datetime.combine(yesterday, datetime.min.time()).replace(hour=17, minute=45)
-    db.add(
-        Attendance(
-            employee_id=employee_id,
-            date=yesterday,
-            check_in=check_in,
-            check_out=check_out,
-            status=AttendanceStatus.PRESENT.value,
+    samples = [
+        (1, 9, 15, 17, 45, AttendanceStatus.PRESENT.value),
+        (2, 9, 40, 16, 10, AttendanceStatus.HALF_DAY.value),
+        (3, 9, 5, 18, 0, AttendanceStatus.PRESENT.value),
+        (4, 10, 0, 18, 20, AttendanceStatus.PRESENT.value),
+        (5, 9, 25, 14, 30, AttendanceStatus.HALF_DAY.value),
+    ]
+    for days_ago, in_hour, in_minute, out_hour, out_minute, status in samples:
+        attendance_date = date.today() - timedelta(days=days_ago)
+        existing = (
+            db.query(Attendance)
+            .filter(Attendance.employee_id == employee_id, Attendance.date == attendance_date)
+            .first()
         )
-    )
+        if existing:
+            continue
+
+        check_in = datetime.combine(attendance_date, datetime.min.time()).replace(
+            hour=in_hour,
+            minute=in_minute,
+        )
+        check_out = datetime.combine(attendance_date, datetime.min.time()).replace(
+            hour=out_hour,
+            minute=out_minute,
+        )
+        db.add(
+            Attendance(
+                employee_id=employee_id,
+                date=attendance_date,
+                check_in=check_in,
+                check_out=check_out,
+                status=status,
+            )
+        )
 
 
 def ensure_leave_request(db: Session, employee_id: str) -> None:
-    existing = db.query(LeaveRequest).filter(LeaveRequest.employee_id == employee_id).first()
-    if existing:
-        return
-
     start_date = date.today() + timedelta(days=3)
-    db.add(
-        LeaveRequest(
-            employee_id=employee_id,
-            leave_type=LeaveType.PAID.value,
-            start_date=start_date,
-            end_date=start_date + timedelta(days=1),
-            remarks="Family function",
-            status=LeaveStatus.PENDING.value,
+    current_month_leave = date.today().replace(day=min(date.today().day, 20))
+    for leave_type, first_day, last_day, remarks, status in [
+        (LeaveType.PAID.value, start_date, start_date + timedelta(days=1), "Family function", LeaveStatus.PENDING.value),
+        (LeaveType.PAID.value, current_month_leave, current_month_leave + timedelta(days=2), "Approved personal leave", LeaveStatus.APPROVED.value),
+        (LeaveType.SICK.value, current_month_leave + timedelta(days=4), current_month_leave + timedelta(days=5), "Approved sick leave", LeaveStatus.APPROVED.value),
+    ]:
+        existing = (
+            db.query(LeaveRequest)
+            .filter(
+                LeaveRequest.employee_id == employee_id,
+                LeaveRequest.leave_type == leave_type,
+                LeaveRequest.start_date == first_day,
+                LeaveRequest.end_date == last_day,
+                LeaveRequest.remarks == remarks,
+            )
+            .first()
         )
-    )
+        if existing:
+            continue
+
+        db.add(
+            LeaveRequest(
+                employee_id=employee_id,
+                leave_type=leave_type,
+                start_date=first_day,
+                end_date=last_day,
+                remarks=remarks,
+                status=status,
+                admin_comment="Demo record" if status == LeaveStatus.APPROVED.value else "",
+            )
+        )

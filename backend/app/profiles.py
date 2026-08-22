@@ -38,6 +38,8 @@ def serialize_profile(profile: EmployeeProfile, user: User) -> ProfileRead:
         profile_picture_url=profile.profile_picture_url,
         address=profile.address,
         phone=profile.phone,
+        father_name=profile.father_name,
+        mother_name=profile.mother_name,
     )
 
 
@@ -62,9 +64,13 @@ def update_my_profile(
 ) -> ProfileRead:
     profile = get_or_create_profile(db, current_user)
     for field, value in payload.model_dump(exclude_unset=True).items():
-        setattr(profile, field, value)
+        if field == "name":
+            current_user.name = value
+        else:
+            setattr(profile, field, value)
     db.commit()
     db.refresh(profile)
+    db.refresh(current_user)
     return serialize_profile(profile, current_user)
 
 
@@ -90,7 +96,11 @@ def update_employee_profile(
 
     profile = get_or_create_profile(db, user)
     for field, value in payload.model_dump(exclude_unset=True).items():
-        setattr(profile, field, value)
+        if field == "name":
+            user.name = value
+        else:
+            setattr(profile, field, value)
     db.commit()
     db.refresh(profile)
+    db.refresh(user)
     return serialize_profile(profile, user)
