@@ -5,6 +5,7 @@ from .auth import get_current_user, require_admin, router as auth_router
 from .config import settings
 from .database import Base, engine
 from .models import User
+from .profiles import router as profiles_router
 from .schemas import UserRead
 
 app = FastAPI(title=settings.app_name)
@@ -19,6 +20,7 @@ app.add_middleware(
 )
 
 app.include_router(auth_router)
+app.include_router(profiles_router)
 
 
 @app.get("/health")

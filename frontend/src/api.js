@@ -42,3 +42,27 @@ export function getCurrentUser(token) {
 export function getAdminUser(token) {
   return request("/admin/users/me", { token });
 }
+
+export function getMyProfile(token) {
+  return request("/profiles/me", { token });
+}
+
+export function updateMyProfile(token, payload) {
+  return request("/profiles/me", {
+    method: "PATCH",
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
+export function getAdminProfiles(token) {
+  return request("/admin/profiles", { token });
+}
+
+export function updateAdminProfile(token, employeeId, payload) {
+  return request(`/admin/profiles/${employeeId}`, {
+    method: "PATCH",
+    token,
+    body: JSON.stringify(payload),
+  });
+}

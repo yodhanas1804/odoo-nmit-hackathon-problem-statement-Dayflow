@@ -113,9 +113,20 @@ Dayflow is a planned Human Resource Management System for the Odoo NMIT hackatho
 - Role-aware dashboard placeholder added.
 - Employee users are blocked from admin-only API access.
 
+## Phase 3 Status
+
+- Employee profile schema added.
+- Profile records are created on signup and lazy-created for existing users.
+- Employees can view their own profile.
+- Employees can edit only address, phone, and profile picture URL.
+- Admins can list employee profiles.
+- Admins can update profile details, job details, salary structure, documents metadata, address, phone, and profile picture URL.
+- Backend authorization enforces profile access rules.
+- Frontend profile view and edit forms added.
+
 ## Next Phase
 
-Phase 3 will add employee profile viewing and editing.
+Phase 4 will add attendance tracking.
 
 ## Local Development
 
@@ -142,6 +153,10 @@ POST /auth/signup
 POST /auth/login
 GET /users/me
 GET /admin/users/me
+GET /profiles/me
+PATCH /profiles/me
+GET /admin/profiles
+PATCH /admin/profiles/{employee_id}
 ```
 
 ### Frontend

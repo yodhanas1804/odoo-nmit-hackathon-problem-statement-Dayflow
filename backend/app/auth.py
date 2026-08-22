@@ -4,7 +4,7 @@ from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from .database import get_db
-from .models import User, UserRole
+from .models import EmployeeProfile, User, UserRole
 from .schemas import Token, UserCreate, UserLogin, UserRead
 from .security import create_access_token, decode_token, hash_password, verify_password
 
@@ -32,6 +32,8 @@ def signup(payload: UserCreate, db: Session = Depends(get_db)) -> Token:
     db.add(user)
     db.commit()
     db.refresh(user)
+    db.add(EmployeeProfile(user_id=user.id))
+    db.commit()
     return Token(access_token=create_access_token(str(user.id)), user=UserRead.model_validate(user))
 
 
