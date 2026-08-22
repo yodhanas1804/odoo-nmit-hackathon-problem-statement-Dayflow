@@ -153,9 +153,39 @@ Dayflow is a planned Human Resource Management System for the Odoo NMIT hackatho
 - Net salary is calculated from basic salary plus allowances minus deductions.
 - Backend authorization enforces payroll access rules.
 
+## Phase 7 Status
+
+- Role-specific dashboard navigation added.
+- Employee dashboard links profile, attendance, leave requests, and payroll.
+- Admin dashboard links employee profiles, attendance, leave approvals, and payroll management.
+- Logout remains available from the authenticated dashboard.
+- Demo accounts and sample records are seeded automatically on backend startup.
+- Full workflow can be tested without manual database edits.
+
 ## Next Phase
 
-Phase 7 will connect all modules into dashboards.
+Phase 8 will prepare final polish and verification.
+
+## Demo Accounts
+
+These accounts are created automatically when the backend starts:
+
+```text
+Employee: employee.dayflow@example.com / password123
+Admin: admin.dayflow@example.com / password123
+```
+
+## Demo Flow
+
+1. Login as the employee.
+2. Open Profile and verify employee details.
+3. Open Attendance and check in.
+4. Open Leave and submit a request.
+5. Logout.
+6. Login as the admin.
+7. Open Admin and approve or reject the leave request.
+8. Review attendance and payroll in the Admin dashboard.
+9. Login as the employee again and verify the updated leave status.
 
 ## Local Development
 

@@ -1,5 +1,17 @@
 import { useEffect, useState } from "react";
-import { Activity, AlertCircle, CheckCircle2, Clock, LogOut, Save, Send } from "lucide-react";
+import {
+  Activity,
+  AlertCircle,
+  CheckCircle2,
+  Clock,
+  FileText,
+  LogOut,
+  Save,
+  Send,
+  UserRound,
+  Users,
+  Wallet,
+} from "lucide-react";
 import {
   checkIn,
   checkOut,
@@ -406,6 +418,18 @@ function Dashboard(props) {
     logout,
     isAdmin,
   } = props;
+  const [activeSection, setActiveSection] = useState("overview");
+  const pendingLeaves = props.adminLeaves?.filter((leave) => leave.status === "PENDING").length || 0;
+  const todayAttendance = attendance.find((record) => record.date === formatDateKey(new Date()));
+  const modules = [
+    { id: "overview", label: "Overview", icon: Activity },
+    { id: "profile", label: "Profile", icon: UserRound },
+    { id: "attendance", label: "Attendance", icon: Clock },
+    { id: "leaves", label: "Leave", icon: FileText },
+    { id: "payroll", label: "Payroll", icon: Wallet },
+    ...(isAdmin ? [{ id: "admin", label: "Admin", icon: Users }] : []),
+  ];
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-slate-200 p-4">
@@ -416,7 +440,94 @@ function Dashboard(props) {
         <button className="inline-flex items-center gap-2 rounded-md border border-slate-300 px-4 py-2 text-sm font-medium" onClick={logout}><LogOut size={16} /> Logout</button>
       </div>
 
-      <form className="grid gap-4 lg:grid-cols-2" onSubmit={saveMyProfile}>
+      <ModuleNav modules={modules} activeSection={activeSection} setActiveSection={setActiveSection} />
+
+      {activeSection === "overview" && (
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <DashboardCard title="Profile" value={profile?.job_details || "Profile ready"} detail={profile?.employee_id || auth.user.employee_id} icon={UserRound} onClick={() => setActiveSection("profile")} />
+          <DashboardCard title="Attendance" value={todayAttendance ? "Checked in today" : "No check-in today"} detail={`${attendance.length} recent records`} icon={Clock} onClick={() => setActiveSection("attendance")} />
+          <DashboardCard title="Leave" value={`${leaves.length} requests`} detail={isAdmin ? `${pendingLeaves} pending approvals` : "Track approval status"} icon={FileText} onClick={() => setActiveSection("leaves")} />
+          <DashboardCard title="Payroll" value={formatCurrency(payroll?.net_salary)} detail="Current net salary" icon={Wallet} onClick={() => setActiveSection("payroll")} />
+          {isAdmin && <DashboardCard title="Admin" value={`${props.adminProfiles.length} employees`} detail="Profiles, attendance, leave, payroll" icon={Users} onClick={() => setActiveSection("admin")} />}
+        </div>
+      )}
+
+      {activeSection === "profile" && (
+        <ProfilePanel
+          profile={profile}
+          profileForm={profileForm}
+          setProfileForm={setProfileForm}
+          saveMyProfile={saveMyProfile}
+        />
+      )}
+
+      {activeSection === "attendance" && (
+        <AttendancePanel
+          attendance={attendance}
+          onCheckIn={onCheckIn}
+          onCheckOut={onCheckOut}
+        />
+      )}
+
+      {activeSection === "leaves" && (
+        <LeavePanel
+          form={leaveForm}
+          setForm={setLeaveForm}
+          leaves={leaves}
+          onSubmit={submitLeaveRequest}
+        />
+      )}
+
+      {activeSection === "payroll" && <PayrollPanel payroll={payroll} />}
+
+      {isAdmin && activeSection === "admin" && (
+        <div className="space-y-6">
+          <AdminProfilePanel {...props} />
+          <AdminAttendancePanel records={props.adminAttendance} />
+          <AdminLeavePanel records={props.adminLeaves} onDecision={props.decideLeave} />
+          <AdminPayrollPanel
+            records={props.adminPayroll}
+            onSave={props.saveAdminPayroll}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ModuleNav({ modules, activeSection, setActiveSection }) {
+  return (
+    <div className="flex gap-2 overflow-x-auto rounded-md border border-slate-200 p-2">
+      {modules.map((module) => {
+        const Icon = module.icon;
+        return (
+          <button key={module.id} className={`inline-flex items-center gap-2 whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium ${activeSection === module.id ? "bg-slate-950 text-white" : "text-slate-700 hover:bg-slate-100"}`} type="button" onClick={() => setActiveSection(module.id)}>
+            <Icon size={16} /> {module.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function DashboardCard({ title, value, detail, icon: Icon, onClick }) {
+  return (
+    <button className="rounded-md border border-slate-200 bg-slate-50 p-4 text-left hover:border-slate-400" type="button" onClick={onClick}>
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm font-medium text-slate-600">{title}</p>
+        <Icon size={18} className="text-slate-500" />
+      </div>
+      <p className="mt-3 text-lg font-semibold text-slate-950">{value}</p>
+      <p className="mt-1 text-sm text-slate-600">{detail}</p>
+    </button>
+  );
+}
+
+function ProfilePanel({ profile, profileForm, setProfileForm, saveMyProfile }) {
+  return (
+    <section className="border-t border-slate-200 pt-6">
+      <h3 className="text-base font-semibold tracking-normal">Profile</h3>
+      <form className="mt-4 grid gap-4 lg:grid-cols-2" onSubmit={saveMyProfile}>
         <Readonly label="Employee ID" value={profile?.employee_id} />
         <Readonly label="Job Details" value={profile?.job_details} />
         <Readonly label="Salary Structure" value={profile?.salary_structure} />
@@ -428,32 +539,7 @@ function Dashboard(props) {
           <button className="inline-flex items-center gap-2 rounded-md bg-slate-950 px-4 py-2 text-sm font-medium text-white" type="submit"><Save size={16} /> Save Profile</button>
         </div>
       </form>
-
-      <AttendancePanel
-        attendance={attendance}
-        onCheckIn={onCheckIn}
-        onCheckOut={onCheckOut}
-      />
-
-      <LeavePanel
-        form={leaveForm}
-        setForm={setLeaveForm}
-        leaves={leaves}
-        onSubmit={submitLeaveRequest}
-      />
-
-      <PayrollPanel payroll={payroll} />
-
-      {isAdmin && <AdminProfilePanel {...props} />}
-      {isAdmin && <AdminAttendancePanel records={props.adminAttendance} />}
-      {isAdmin && <AdminLeavePanel records={props.adminLeaves} onDecision={props.decideLeave} />}
-      {isAdmin && (
-        <AdminPayrollPanel
-          records={props.adminPayroll}
-          onSave={props.saveAdminPayroll}
-        />
-      )}
-    </div>
+    </section>
   );
 }
 

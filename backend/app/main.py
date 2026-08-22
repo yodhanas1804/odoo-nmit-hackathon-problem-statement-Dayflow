@@ -4,7 +4,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from .attendance import router as attendance_router
 from .auth import get_current_user, require_admin, router as auth_router
 from .config import settings
-from .database import Base, engine
+from .database import Base, SessionLocal, engine
+from .demo_data import seed_demo_data
 from .leaves import router as leaves_router
 from .models import User
 from .payroll import router as payroll_router
@@ -13,6 +14,8 @@ from .schemas import UserRead
 
 app = FastAPI(title=settings.app_name)
 Base.metadata.create_all(bind=engine)
+with SessionLocal() as db:
+    seed_demo_data(db)
 
 app.add_middleware(
     CORSMiddleware,
