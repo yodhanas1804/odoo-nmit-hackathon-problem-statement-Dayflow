@@ -1,8 +1,12 @@
 import { useEffect, useState } from "react";
-import { Activity, AlertCircle, CheckCircle2, LogOut, Save } from "lucide-react";
+import { Activity, AlertCircle, CheckCircle2, Clock, LogOut, Save } from "lucide-react";
 import {
+  checkIn,
+  checkOut,
+  getAdminAttendance,
   getAdminProfiles,
   getHealth,
+  getMyAttendance,
   getMyProfile,
   login,
   signup,
@@ -52,6 +56,8 @@ function App() {
   const [profile, setProfile] = useState(null);
   const [profileForm, setProfileForm] = useState(compactProfile());
   const [adminProfiles, setAdminProfiles] = useState([]);
+  const [attendance, setAttendance] = useState([]);
+  const [adminAttendance, setAdminAttendance] = useState([]);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState("");
   const [adminForm, setAdminForm] = useState(compactProfile());
   const [error, setError] = useState("");
@@ -68,7 +74,11 @@ function App() {
   useEffect(() => {
     if (!auth) return;
     loadProfile();
-    if (auth.user.role === "ADMIN") loadAdminProfiles();
+    loadAttendance();
+    if (auth.user.role === "ADMIN") {
+      loadAdminProfiles();
+      loadAdminAttendance();
+    }
   }, [auth]);
 
   async function handleSubmit(event) {
@@ -102,6 +112,29 @@ function App() {
     if (profiles.length && !selectedEmployeeId) {
       setSelectedEmployeeId(profiles[0].employee_id);
       setAdminForm(compactProfile(profiles[0]));
+    }
+  }
+
+  async function loadAttendance() {
+    const records = await getMyAttendance(auth.access_token);
+    setAttendance(records);
+  }
+
+  async function loadAdminAttendance() {
+    const records = await getAdminAttendance(auth.access_token);
+    setAdminAttendance(records);
+  }
+
+  async function handleAttendanceAction(action) {
+    setError("");
+    setNotice("");
+    try {
+      const saved = await action(auth.access_token);
+      setNotice(saved.check_out ? "Checked out for today" : "Checked in for today");
+      await loadAttendance();
+      if (isAdmin) await loadAdminAttendance();
+    } catch (err) {
+      setError(err.message);
     }
   }
 
@@ -146,6 +179,8 @@ function App() {
     setAuth(null);
     setProfile(null);
     setAdminProfiles([]);
+    setAttendance([]);
+    setAdminAttendance([]);
     setNotice("");
     setError("");
   }
@@ -173,9 +208,13 @@ function App() {
                 profileForm={profileForm}
                 setProfileForm={setProfileForm}
                 saveMyProfile={saveMyProfile}
+                attendance={attendance}
+                onCheckIn={() => handleAttendanceAction(checkIn)}
+                onCheckOut={() => handleAttendanceAction(checkOut)}
                 logout={logout}
                 isAdmin={isAdmin}
                 adminProfiles={adminProfiles}
+                adminAttendance={adminAttendance}
                 selectedEmployeeId={selectedEmployeeId}
                 selectAdminProfile={selectAdminProfile}
                 adminForm={adminForm}
@@ -249,7 +288,18 @@ function AuthForm({ mode, setMode, form, setForm, onSubmit }) {
 }
 
 function Dashboard(props) {
-  const { auth, profile, profileForm, setProfileForm, saveMyProfile, logout, isAdmin } = props;
+  const {
+    auth,
+    profile,
+    profileForm,
+    setProfileForm,
+    saveMyProfile,
+    attendance,
+    onCheckIn,
+    onCheckOut,
+    logout,
+    isAdmin,
+  } = props;
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-slate-200 p-4">
@@ -273,8 +323,49 @@ function Dashboard(props) {
         </div>
       </form>
 
+      <AttendancePanel
+        attendance={attendance}
+        onCheckIn={onCheckIn}
+        onCheckOut={onCheckOut}
+      />
+
       {isAdmin && <AdminProfilePanel {...props} />}
+      {isAdmin && <AdminAttendancePanel records={props.adminAttendance} />}
     </div>
+  );
+}
+
+function AttendancePanel({ attendance, onCheckIn, onCheckOut }) {
+  const today = formatDateKey(new Date());
+  const todayRecord = attendance.find((record) => record.date === today);
+
+  return (
+    <section className="border-t border-slate-200 pt-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h3 className="text-base font-semibold tracking-normal">Attendance</h3>
+          <p className="mt-1 text-sm text-slate-600">Daily actions and recent attendance</p>
+        </div>
+        <div className="flex gap-2">
+          <button className="inline-flex items-center gap-2 rounded-md bg-emerald-700 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-slate-300" type="button" onClick={onCheckIn} disabled={Boolean(todayRecord)}>
+            <Clock size={16} /> Check In
+          </button>
+          <button className="inline-flex items-center gap-2 rounded-md bg-slate-950 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-slate-300" type="button" onClick={onCheckOut} disabled={!todayRecord || Boolean(todayRecord.check_out)}>
+            <Clock size={16} /> Check Out
+          </button>
+        </div>
+      </div>
+      <AttendanceTable records={attendance} emptyText="No attendance records for the last 7 days." />
+    </section>
+  );
+}
+
+function AdminAttendancePanel({ records }) {
+  return (
+    <section className="border-t border-slate-200 pt-6">
+      <h3 className="text-base font-semibold tracking-normal">Admin Attendance View</h3>
+      <AttendanceTable records={records} showEmployee emptyText="No employee attendance records for the last 7 days." />
+    </section>
   );
 }
 
@@ -314,6 +405,59 @@ function Readonly({ label, value }) {
       <p className="mt-1 min-h-5 text-sm text-slate-800">{value || "Not set"}</p>
     </div>
   );
+}
+
+function AttendanceTable({ records, showEmployee = false, emptyText }) {
+  return (
+    <div className="mt-4 overflow-x-auto rounded-md border border-slate-200">
+      <table className="w-full min-w-[620px] border-collapse text-left text-sm">
+        <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+          <tr>
+            {showEmployee && <th className="px-3 py-2 font-medium">Employee ID</th>}
+            <th className="px-3 py-2 font-medium">Date</th>
+            <th className="px-3 py-2 font-medium">Check In</th>
+            <th className="px-3 py-2 font-medium">Check Out</th>
+            <th className="px-3 py-2 font-medium">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {records.length ? (
+            records.map((record) => (
+              <tr key={record.id} className="border-t border-slate-200">
+                {showEmployee && <td className="px-3 py-2">{record.employee_id}</td>}
+                <td className="px-3 py-2">{record.date}</td>
+                <td className="px-3 py-2">{formatTime(record.check_in)}</td>
+                <td className="px-3 py-2">
+                  {record.check_out ? formatTime(record.check_out) : "Not checked out"}
+                </td>
+                <td className="px-3 py-2">{record.status.replace("_", " ")}</td>
+              </tr>
+            ))
+          ) : (
+            <tr>
+              <td className="px-3 py-4 text-slate-600" colSpan={showEmployee ? 5 : 4}>
+                {emptyText}
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function formatTime(value) {
+  return new Intl.DateTimeFormat(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
+function formatDateKey(value) {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 export default App;

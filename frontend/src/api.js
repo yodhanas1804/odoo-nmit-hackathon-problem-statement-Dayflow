@@ -66,3 +66,25 @@ export function updateAdminProfile(token, employeeId, payload) {
     body: JSON.stringify(payload),
   });
 }
+
+export function checkIn(token) {
+  return request("/attendance/check-in", {
+    method: "POST",
+    token,
+  });
+}
+
+export function checkOut(token) {
+  return request("/attendance/check-out", {
+    method: "POST",
+    token,
+  });
+}
+
+export function getMyAttendance(token) {
+  return request("/attendance/me?days=7", { token });
+}
+
+export function getAdminAttendance(token) {
+  return request("/admin/attendance?days=7", { token });
+}

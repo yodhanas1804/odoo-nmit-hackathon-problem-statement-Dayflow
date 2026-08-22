@@ -124,9 +124,18 @@ Dayflow is a planned Human Resource Management System for the Odoo NMIT hackatho
 - Backend authorization enforces profile access rules.
 - Frontend profile view and edit forms added.
 
+## Phase 4 Status
+
+- Attendance schema added with one record per employee per date.
+- Employee check-in and check-out APIs added.
+- Duplicate same-day check-ins and check-outs are blocked.
+- Employees can view their own recent attendance.
+- Admins can view recent attendance for all employees.
+- Frontend attendance actions and recent attendance tables added.
+
 ## Next Phase
 
-Phase 4 will add attendance tracking.
+Phase 5 will add leave management.
 
 ## Local Development
 
@@ -157,6 +166,10 @@ GET /profiles/me
 PATCH /profiles/me
 GET /admin/profiles
 PATCH /admin/profiles/{employee_id}
+POST /attendance/check-in
+POST /attendance/check-out
+GET /attendance/me
+GET /admin/attendance
 ```
 
 ### Frontend

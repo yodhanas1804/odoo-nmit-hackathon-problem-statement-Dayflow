@@ -1,9 +1,9 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Optional
 
 from pydantic import BaseModel, EmailStr, Field
 
-from .models import UserRole
+from .models import AttendanceStatus, UserRole
 
 
 class UserCreate(BaseModel):
@@ -63,3 +63,14 @@ class AdminProfileUpdate(EmployeeProfileUpdate):
     job_details: Optional[str] = None
     salary_structure: Optional[str] = None
     documents_metadata: Optional[str] = None
+
+
+class AttendanceRead(BaseModel):
+    id: int
+    employee_id: str
+    date: date
+    check_in: datetime
+    check_out: Optional[datetime]
+    status: AttendanceStatus
+
+    model_config = {"from_attributes": True}
