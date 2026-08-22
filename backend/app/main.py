@@ -14,8 +14,9 @@ from .schemas import UserRead
 
 app = FastAPI(title=settings.app_name)
 Base.metadata.create_all(bind=engine)
-with SessionLocal() as db:
-    seed_demo_data(db)
+if settings.seed_demo_data:
+    with SessionLocal() as db:
+        seed_demo_data(db)
 
 app.add_middleware(
     CORSMiddleware,

@@ -104,17 +104,25 @@ function App() {
 
   useEffect(() => {
     if (!auth) return;
-    loadProfile();
-    loadAttendance();
-    loadLeaves();
-    loadPayroll();
-    if (auth.user.role === "ADMIN") {
-      loadAdminProfiles();
-      loadAdminAttendance();
-      loadAdminLeaves();
-      loadAdminPayroll();
-    }
+    loadDashboardData();
   }, [auth]);
+
+  async function loadDashboardData() {
+    setError("");
+    try {
+      await Promise.all([loadProfile(), loadAttendance(), loadLeaves(), loadPayroll()]);
+      if (auth.user.role === "ADMIN") {
+        await Promise.all([
+          loadAdminProfiles(),
+          loadAdminAttendance(),
+          loadAdminLeaves(),
+          loadAdminPayroll(),
+        ]);
+      }
+    } catch (err) {
+      setError(err.message || "Unable to load dashboard data");
+    }
+  }
 
   async function handleSubmit(event) {
     event.preventDefault();

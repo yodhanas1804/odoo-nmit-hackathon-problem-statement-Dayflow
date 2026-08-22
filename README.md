@@ -162,9 +162,27 @@ Dayflow is a planned Human Resource Management System for the Odoo NMIT hackatho
 - Demo accounts and sample records are seeded automatically on backend startup.
 - Full workflow can be tested without manual database edits.
 
-## Next Phase
+## Phase 8 Status
 
-Phase 8 will prepare final polish and verification.
+- Critical workflows verified for demo readiness.
+- Dashboard data loading errors are surfaced in the UI.
+- Demo data seeding can be disabled with `SEED_DEMO_DATA=false`.
+- Frontend production build passes.
+- Backend compile/import checks pass.
+- Authentication, authorization, profile, attendance, leave, payroll, and dashboard workflows verified.
+
+## Implemented Features
+
+- JWT-based signup and login.
+- `EMPLOYEE` and `ADMIN` role-based access control.
+- Employee profile viewing and limited employee editing.
+- Admin employee profile management.
+- Attendance check-in, check-out, employee view, and admin view.
+- Leave request creation, employee status tracking, and admin approval or rejection.
+- Employee payroll visibility.
+- Admin payroll management with net salary calculation.
+- Role-specific dashboard navigation.
+- Automatic demo seed data for local demos.
 
 ## Demo Accounts
 
@@ -197,6 +215,18 @@ python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
 uvicorn app.main:app --reload
+```
+
+Backend environment variables:
+
+```text
+APP_NAME=Dayflow HRMS
+ENVIRONMENT=development
+FRONTEND_ORIGIN=http://localhost:5173
+DATABASE_URL=sqlite:///./dayflow.db
+SECRET_KEY=change-this-secret
+ACCESS_TOKEN_EXPIRE_MINUTES=1440
+SEED_DEMO_DATA=true
 ```
 
 Backend health endpoint:

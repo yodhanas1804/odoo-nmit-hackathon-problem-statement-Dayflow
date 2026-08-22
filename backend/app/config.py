@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./dayflow.db"
     secret_key: str = "dev-secret-change-me"
     access_token_expire_minutes: int = 1440
+    seed_demo_data: bool = True
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
