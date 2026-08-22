@@ -179,6 +179,7 @@ Dayflow is a planned Human Resource Management System for the Odoo NMIT hackatho
 - `EMPLOYEE` and `ADMIN` role-based access control.
 - Employee profile viewing and limited employee editing.
 - Admin employee profile management.
+- Admin account management for role promotion, deactivation/reactivation, and password reset.
 - Attendance check-in, check-out, employee view, and admin view.
 - Leave request creation, employee status tracking, and admin approval or rejection.
 - Employee payroll visibility.
@@ -258,6 +259,10 @@ GET /users/me
 GET /admin/users/me
 GET /admin/registrations
 PATCH /admin/registrations/{request_id}
+GET /admin/users
+PATCH /admin/users/{employee_id}/role
+PATCH /admin/users/{employee_id}/status
+PATCH /admin/users/{employee_id}/password
 GET /profiles/me
 PATCH /profiles/me
 GET /admin/profiles

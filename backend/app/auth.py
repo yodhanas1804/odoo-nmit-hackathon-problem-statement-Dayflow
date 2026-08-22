@@ -6,7 +6,10 @@ from sqlalchemy.orm import Session
 from .database import get_db
 from .models import EmployeeProfile, RegistrationRequest, RegistrationStatus, User, UserRole
 from .schemas import (
+    AdminPasswordReset,
     AdminRegistrationDecision,
+    AdminUserRoleUpdate,
+    AdminUserStatusUpdate,
     RegistrationRequestRead,
     Token,
     UserCreate,
@@ -62,6 +65,8 @@ def login(payload: UserLogin, db: Session = Depends(get_db)) -> Token:
     user = db.query(User).filter(User.email == payload.email).first()
     if not user or not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid email or password")
+    if not user.is_active:
+        raise HTTPException(status_code=403, detail="Account is deactivated")
     return Token(access_token=create_access_token(str(user.id)), user=UserRead.model_validate(user))
 
 
@@ -79,6 +84,8 @@ def get_current_user(
     user = db.get(User, parsed_user_id)
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
+    if not user.is_active:
+        raise HTTPException(status_code=403, detail="Account is deactivated")
     return user
 
 
@@ -86,6 +93,13 @@ def require_admin(current_user: User = Depends(get_current_user)) -> User:
     if current_user.role != UserRole.ADMIN.value:
         raise HTTPException(status_code=403, detail="Admin access required")
     return current_user
+
+
+def find_user_by_employee_id(db: Session, employee_id: str) -> User:
+    user = db.query(User).filter(User.employee_id == employee_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    return user
 
 
 @admin_router.get("/admin/registrations", response_model=list[RegistrationRequestRead])
@@ -137,3 +151,57 @@ def decide_registration_request(
     db.commit()
     db.refresh(registration)
     return registration
+
+
+@admin_router.get("/admin/users", response_model=list[UserRead])
+def list_users(
+    _admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> list[User]:
+    return db.query(User).order_by(User.created_at.desc()).all()
+
+
+@admin_router.patch("/admin/users/{employee_id}/role", response_model=UserRead)
+def update_user_role(
+    employee_id: str,
+    payload: AdminUserRoleUpdate,
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> User:
+    user = find_user_by_employee_id(db, employee_id)
+    if user.id == admin.id:
+        raise HTTPException(status_code=400, detail="Admins cannot change their own role")
+    user.role = payload.role.value
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+@admin_router.patch("/admin/users/{employee_id}/status", response_model=UserRead)
+def update_user_status(
+    employee_id: str,
+    payload: AdminUserStatusUpdate,
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> User:
+    user = find_user_by_employee_id(db, employee_id)
+    if user.id == admin.id and not payload.is_active:
+        raise HTTPException(status_code=400, detail="Admins cannot deactivate their own account")
+    user.is_active = payload.is_active
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+@admin_router.patch("/admin/users/{employee_id}/password", response_model=UserRead)
+def reset_user_password(
+    employee_id: str,
+    payload: AdminPasswordReset,
+    _admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> User:
+    user = find_user_by_employee_id(db, employee_id)
+    user.password_hash = hash_password(payload.password)
+    db.commit()
+    db.refresh(user)
+    return user

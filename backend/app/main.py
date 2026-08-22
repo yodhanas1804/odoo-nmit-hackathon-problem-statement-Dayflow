@@ -1,5 +1,6 @@
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import inspect, text
 
 from .attendance import router as attendance_router
 from .auth import admin_router as registration_admin_router
@@ -15,6 +16,22 @@ from .schemas import UserRead
 
 app = FastAPI(title=settings.app_name)
 Base.metadata.create_all(bind=engine)
+
+
+def ensure_runtime_schema() -> None:
+    inspector = inspect(engine)
+    if "users" not in inspector.get_table_names():
+        return
+    user_columns = {column["name"] for column in inspector.get_columns("users")}
+    if "is_active" not in user_columns:
+        default_value = "1" if engine.dialect.name == "sqlite" else "TRUE"
+        with engine.begin() as connection:
+            connection.execute(
+                text(f"ALTER TABLE users ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT {default_value}")
+            )
+
+
+ensure_runtime_schema()
 if settings.seed_demo_data:
     with SessionLocal() as db:
         seed_demo_data(db)

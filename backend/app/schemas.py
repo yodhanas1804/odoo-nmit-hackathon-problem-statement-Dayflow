@@ -45,6 +45,7 @@ class UserRead(BaseModel):
     name: str
     email: EmailStr
     role: UserRole
+    is_active: bool
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -72,6 +73,18 @@ class RegistrationRequestRead(BaseModel):
 class AdminRegistrationDecision(BaseModel):
     status: RegistrationStatus
     admin_comment: str = Field(default="", max_length=1000)
+
+
+class AdminUserRoleUpdate(BaseModel):
+    role: UserRole
+
+
+class AdminUserStatusUpdate(BaseModel):
+    is_active: bool
+
+
+class AdminPasswordReset(BaseModel):
+    password: str = Field(min_length=8)
 
 
 class ProfileRead(BaseModel):

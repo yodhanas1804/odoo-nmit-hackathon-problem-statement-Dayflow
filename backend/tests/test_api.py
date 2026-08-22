@@ -339,3 +339,95 @@ def test_payroll_admin_update_and_employee_read_only(client, db_session):
         json={"basic_salary": -1, "allowances": 0, "deductions": 0},
     )
     assert negative_value.status_code == 422
+
+
+def test_admin_can_manage_accounts(client, db_session):
+    employee = create_user(db_session)
+    admin = create_user(
+        db_session,
+        employee_id="ADM400",
+        email="admin400@example.com",
+        role=UserRole.ADMIN.value,
+    )
+    employee_headers = auth_headers(create_access_token(str(employee.id)))
+    admin_headers = auth_headers(create_access_token(str(admin.id)))
+
+    employee_users_view = client.get("/admin/users", headers=employee_headers)
+    assert employee_users_view.status_code == 403
+
+    users = client.get("/admin/users", headers=admin_headers)
+    assert users.status_code == 200
+    assert len(users.json()) == 2
+
+    promote = client.patch(
+        "/admin/users/EMP100/role",
+        headers=admin_headers,
+        json={"role": "ADMIN"},
+    )
+    assert promote.status_code == 200
+    assert promote.json()["role"] == "ADMIN"
+
+    deactivate = client.patch(
+        "/admin/users/EMP100/status",
+        headers=admin_headers,
+        json={"is_active": False},
+    )
+    assert deactivate.status_code == 200
+    assert deactivate.json()["is_active"] is False
+
+    inactive_login = client.post(
+        "/auth/login",
+        json={"email": "employee100@example.com", "password": "password123"},
+    )
+    assert inactive_login.status_code == 403
+
+    reactivate = client.patch(
+        "/admin/users/EMP100/status",
+        headers=admin_headers,
+        json={"is_active": True},
+    )
+    assert reactivate.status_code == 200
+    assert reactivate.json()["is_active"] is True
+
+    reset = client.patch(
+        "/admin/users/EMP100/password",
+        headers=admin_headers,
+        json={"password": "newpassword123"},
+    )
+    assert reset.status_code == 200
+
+    old_password = client.post(
+        "/auth/login",
+        json={"email": "employee100@example.com", "password": "password123"},
+    )
+    assert old_password.status_code == 401
+
+    new_password = client.post(
+        "/auth/login",
+        json={"email": "employee100@example.com", "password": "newpassword123"},
+    )
+    assert new_password.status_code == 200
+
+
+def test_admin_cannot_deactivate_or_demote_self(client, db_session):
+    admin = create_user(
+        db_session,
+        employee_id="ADM500",
+        email="admin500@example.com",
+        role=UserRole.ADMIN.value,
+    )
+    admin_headers = auth_headers(create_access_token(str(admin.id)))
+
+    self_deactivate = client.patch(
+        "/admin/users/ADM500/status",
+        headers=admin_headers,
+        json={"is_active": False},
+    )
+    assert self_deactivate.status_code == 400
+
+    self_demote = client.patch(
+        "/admin/users/ADM500/role",
+        headers=admin_headers,
+        json={"role": "EMPLOYEE"},
+    )
+    assert self_demote.status_code == 400

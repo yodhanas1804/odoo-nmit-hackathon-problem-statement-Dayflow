@@ -21,17 +21,21 @@ import {
   getAdminPayroll,
   getAdminProfiles,
   getAdminRegistrations,
+  getAdminUsers,
   getHealth,
   getMyAttendance,
   getMyLeaves,
   getMyPayroll,
   getMyProfile,
   login,
+  resetAdminUserPassword,
   signup,
   updateAdminLeave,
   updateAdminPayroll,
   updateAdminProfile,
   updateAdminRegistration,
+  updateAdminUserRole,
+  updateAdminUserStatus,
   updateMyProfile,
 } from "./api";
 
@@ -85,6 +89,7 @@ function App() {
   const [profileForm, setProfileForm] = useState(compactProfile());
   const [adminProfiles, setAdminProfiles] = useState([]);
   const [adminRegistrations, setAdminRegistrations] = useState([]);
+  const [adminUsers, setAdminUsers] = useState([]);
   const [attendance, setAttendance] = useState([]);
   const [adminAttendance, setAdminAttendance] = useState([]);
   const [leaveForm, setLeaveForm] = useState(emptyLeaveForm);
@@ -118,6 +123,7 @@ function App() {
         await Promise.all([
           loadAdminProfiles(),
           loadAdminRegistrations(),
+          loadAdminUsers(),
           loadAdminAttendance(),
           loadAdminLeaves(),
           loadAdminPayroll(),
@@ -171,6 +177,11 @@ function App() {
   async function loadAdminRegistrations() {
     const records = await getAdminRegistrations(auth.access_token);
     setAdminRegistrations(records);
+  }
+
+  async function loadAdminUsers() {
+    const records = await getAdminUsers(auth.access_token);
+    setAdminUsers(records);
   }
 
   async function loadAttendance() {
@@ -258,6 +269,7 @@ function App() {
       setNotice(`Registration request ${status.toLowerCase()}`);
       await loadAdminRegistrations();
       await loadAdminProfiles();
+      await loadAdminUsers();
       await loadAdminPayroll();
     } catch (err) {
       setError(err.message);
@@ -272,6 +284,42 @@ function App() {
       setNotice(`Updated payroll for ${saved.employee_id}`);
       await loadAdminPayroll();
       if (employeeId === auth.user.employee_id) await loadPayroll();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function saveAdminUserRole(employeeId, role) {
+    setError("");
+    setNotice("");
+    try {
+      await updateAdminUserRole(auth.access_token, employeeId, { role });
+      setNotice(`Updated role for ${employeeId}`);
+      await loadAdminUsers();
+      await loadAdminProfiles();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function saveAdminUserStatus(employeeId, isActive) {
+    setError("");
+    setNotice("");
+    try {
+      await updateAdminUserStatus(auth.access_token, employeeId, { is_active: isActive });
+      setNotice(`${employeeId} ${isActive ? "reactivated" : "deactivated"}`);
+      await loadAdminUsers();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function saveAdminPassword(employeeId, password) {
+    setError("");
+    setNotice("");
+    try {
+      await resetAdminUserPassword(auth.access_token, employeeId, { password });
+      setNotice(`Password reset for ${employeeId}`);
     } catch (err) {
       setError(err.message);
     }
@@ -319,6 +367,7 @@ function App() {
     setProfile(null);
     setAdminProfiles([]);
     setAdminRegistrations([]);
+    setAdminUsers([]);
     setAttendance([]);
     setAdminAttendance([]);
     setLeaveForm(emptyLeaveForm);
@@ -366,6 +415,10 @@ function App() {
                 adminProfiles={adminProfiles}
                 adminRegistrations={adminRegistrations}
                 decideRegistration={decideRegistration}
+                adminUsers={adminUsers}
+                saveAdminUserRole={saveAdminUserRole}
+                saveAdminUserStatus={saveAdminUserStatus}
+                saveAdminPassword={saveAdminPassword}
                 adminAttendance={adminAttendance}
                 adminLeaves={adminLeaves}
                 decideLeave={decideLeave}
@@ -522,13 +575,21 @@ function Dashboard(props) {
 
       {isAdmin && activeSection === "admin" && (
         <div className="space-y-6">
-          <AdminRegistrationPanel
-            records={props.adminRegistrations}
-            onDecision={props.decideRegistration}
+          <AdminRequestsPanel
+            registrations={props.adminRegistrations}
+            onRegistrationDecision={props.decideRegistration}
+            leaves={props.adminLeaves}
+            onLeaveDecision={props.decideLeave}
+          />
+          <AdminAccountPanel
+            users={props.adminUsers}
+            currentEmployeeId={auth.user.employee_id}
+            onRoleSave={props.saveAdminUserRole}
+            onStatusSave={props.saveAdminUserStatus}
+            onPasswordSave={props.saveAdminPassword}
           />
           <AdminProfilePanel {...props} />
           <AdminAttendancePanel records={props.adminAttendance} />
-          <AdminLeavePanel records={props.adminLeaves} onDecision={props.decideLeave} />
           <AdminPayrollPanel
             records={props.adminPayroll}
             onSave={props.saveAdminPayroll}
@@ -750,6 +811,95 @@ function AdminRegistrationPanel({ records, onDecision }) {
           </tbody>
         </table>
       </div>
+    </section>
+  );
+}
+
+function AdminRequestsPanel({ registrations, onRegistrationDecision, leaves, onLeaveDecision }) {
+  const [requestType, setRequestType] = useState("registrations");
+
+  return (
+    <section className="border-t border-slate-200 pt-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h3 className="text-base font-semibold tracking-normal">Requests</h3>
+        <select className="rounded-md border border-slate-300 px-3 py-2 text-sm" value={requestType} onChange={(event) => setRequestType(event.target.value)}>
+          <option value="registrations">Signup Requests</option>
+          <option value="leaves">Leave Requests</option>
+        </select>
+      </div>
+      {requestType === "registrations" ? (
+        <AdminRegistrationPanel records={registrations} onDecision={onRegistrationDecision} />
+      ) : (
+        <AdminLeavePanel records={leaves} onDecision={onLeaveDecision} />
+      )}
+    </section>
+  );
+}
+
+function AdminAccountPanel({ users, currentEmployeeId, onRoleSave, onStatusSave, onPasswordSave }) {
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState("");
+  const [role, setRole] = useState("EMPLOYEE");
+  const [password, setPassword] = useState("");
+
+  const selectedUser = users.find((user) => user.employee_id === selectedEmployeeId) || users[0];
+
+  useEffect(() => {
+    if (!selectedUser) return;
+    setSelectedEmployeeId(selectedUser.employee_id);
+    setRole(selectedUser.role);
+  }, [selectedUser?.employee_id, selectedUser?.role]);
+
+  if (!users.length) {
+    return (
+      <section className="border-t border-slate-200 pt-6">
+        <h3 className="text-base font-semibold tracking-normal">Account Management</h3>
+        <p className="mt-4 text-sm text-slate-600">No accounts available.</p>
+      </section>
+    );
+  }
+
+  const isSelf = selectedUser.employee_id === currentEmployeeId;
+
+  return (
+    <section className="border-t border-slate-200 pt-6">
+      <h3 className="text-base font-semibold tracking-normal">Account Management</h3>
+      <div className="mt-4 grid gap-4 lg:grid-cols-4">
+        <label className="text-sm font-medium">
+          Account ID
+          <select className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={selectedUser.employee_id} onChange={(event) => setSelectedEmployeeId(event.target.value)}>
+            {users.map((user) => (
+              <option key={user.employee_id} value={user.employee_id}>
+                {user.name} ({user.employee_id})
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="text-sm font-medium">
+          Role
+          <select className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={role} onChange={(event) => setRole(event.target.value)} disabled={isSelf}>
+            <option value="EMPLOYEE">Employee</option>
+            <option value="ADMIN">Admin</option>
+          </select>
+        </label>
+        <Readonly label="Status" value={selectedUser.is_active ? "Active" : "Deactivated"} />
+        <Readonly label="Email" value={selectedUser.email} />
+      </div>
+      <div className="mt-4 flex flex-wrap gap-2">
+        <button className="inline-flex items-center gap-2 rounded-md bg-slate-950 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-slate-300" type="button" disabled={isSelf} onClick={() => onRoleSave(selectedUser.employee_id, role)}><Save size={16} /> Save Role</button>
+        <button className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:bg-slate-100" type="button" disabled={isSelf} onClick={() => onStatusSave(selectedUser.employee_id, !selectedUser.is_active)}>
+          {selectedUser.is_active ? "Deactivate Account" : "Reactivate Account"}
+        </button>
+      </div>
+      <form className="mt-4 grid gap-4 sm:grid-cols-[1fr_auto]" onSubmit={(event) => {
+        event.preventDefault();
+        onPasswordSave(selectedUser.employee_id, password);
+        setPassword("");
+      }}>
+        <Input label="New Password" type="password" value={password} onChange={setPassword} required />
+        <div className="flex items-end">
+          <button className="rounded-md bg-slate-950 px-4 py-2 text-sm font-medium text-white" type="submit">Reset Password</button>
+        </div>
+      </form>
     </section>
   );
 }

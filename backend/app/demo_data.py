@@ -75,6 +75,7 @@ def get_or_create_user(
         user.email = email
         user.password_hash = hash_password(DEMO_PASSWORD)
         user.role = role
+        user.is_active = True
         db.flush()
         return user
 
@@ -84,6 +85,7 @@ def get_or_create_user(
         email=email,
         password_hash=hash_password(DEMO_PASSWORD),
         role=role,
+        is_active=True,
     )
     db.add(user)
     db.flush()

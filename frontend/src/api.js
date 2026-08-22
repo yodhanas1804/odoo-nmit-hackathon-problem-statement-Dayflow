@@ -72,6 +72,34 @@ export function getAdminUser(token) {
   return request("/admin/users/me", { token });
 }
 
+export function getAdminUsers(token) {
+  return request("/admin/users", { token });
+}
+
+export function updateAdminUserRole(token, employeeId, payload) {
+  return request(`/admin/users/${employeeId}/role`, {
+    method: "PATCH",
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateAdminUserStatus(token, employeeId, payload) {
+  return request(`/admin/users/${employeeId}/status`, {
+    method: "PATCH",
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
+export function resetAdminUserPassword(token, employeeId, payload) {
+  return request(`/admin/users/${employeeId}/password`, {
+    method: "PATCH",
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
 export function getMyProfile(token) {
   return request("/profiles/me", { token });
 }
