@@ -6,6 +6,185 @@
 
 body {
   margin: 0;
+  background: #f1f5f9;
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+input,
+select {
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    color 150ms ease,
+    transform 150ms ease;
+}
+
+button:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+
+button:not(:disabled):active {
+  transform: translateY(0);
+}
+
+input:focus,
+select:focus {
+  border-color: #0d9488;
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.12);
+  outline: none;
+}
+
+tbody tr:hover {
+  background: #f8fafc;
+}
+
+.dayflow-over-image {
+  background-color: #020617;
+}
+
+.dayflow-over-image .bg-white,
+.dayflow-over-image .bg-slate-50,
+.dayflow-over-image .bg-slate-100,
+.dayflow-over-image [class*="bg-white/"],
+.dayflow-over-image [class*="bg-slate-50/"] {
+  background-color: rgba(15, 23, 42, 0.58) !important;
+  backdrop-filter: blur(14px);
+}
+
+.dayflow-over-image .bg-white\/60 {
+  background-color: rgba(15, 23, 42, 0.38) !important;
+}
+
+.dayflow-over-image .dayflow-auth-card {
+  background-color: rgba(255, 255, 255, 0.88) !important;
+  color: #0f172a;
+}
+
+.dayflow-over-image .dayflow-auth-card .bg-slate-50,
+.dayflow-over-image .dayflow-auth-card .bg-white {
+  background-color: #ffffff !important;
+}
+
+.dayflow-over-image .dayflow-auth-card .text-slate-900,
+.dayflow-over-image .dayflow-auth-card .text-slate-800,
+.dayflow-over-image .dayflow-auth-card .text-slate-700 {
+  color: #0f172a !important;
+}
+
+.dayflow-over-image .dayflow-auth-card .text-slate-600,
+.dayflow-over-image .dayflow-auth-card .text-slate-500 {
+  color: #475569 !important;
+}
+
+.dayflow-over-image .dayflow-auth-card input {
+  background-color: #ffffff;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
+.dayflow-over-image .dayflow-auth-card input::placeholder {
+  color: #64748b;
+}
+
+.dayflow-over-image header {
+  background-color: rgba(2, 6, 23, 0.58) !important;
+}
+
+.dayflow-over-image .text-slate-950,
+.dayflow-over-image .text-slate-900,
+.dayflow-over-image .text-slate-800,
+.dayflow-over-image .text-slate-700 {
+  color: #f8fafc !important;
+}
+
+.dayflow-over-image .text-slate-600,
+.dayflow-over-image .text-slate-500 {
+  color: #cbd5e1 !important;
+}
+
+.dayflow-over-image .border-slate-100,
+.dayflow-over-image .border-slate-200,
+.dayflow-over-image .border-slate-300,
+.dayflow-over-image [class*="border-white/"] {
+  border-color: rgba(226, 232, 240, 0.22) !important;
+}
+
+.dayflow-over-image input,
+.dayflow-over-image select {
+  background-color: rgba(2, 6, 23, 0.44);
+  border-color: rgba(226, 232, 240, 0.24);
+  color: #f8fafc;
+}
+
+.dayflow-over-image input::placeholder {
+  color: #94a3b8;
+}
+
+.dayflow-over-image thead {
+  background-color: rgba(15, 23, 42, 0.72) !important;
+}
+
+.dayflow-over-image tbody tr:hover {
+  background-color: rgba(15, 23, 42, 0.45);
+}
+
+.dayflow-over-image table {
+  background-color: rgba(2, 6, 23, 0.18);
+}
+
+.dayflow-over-image .shadow-sm,
+.dayflow-over-image .shadow-md,
+.dayflow-over-image .shadow-lg {
+  box-shadow: 0 18px 45px rgba(2, 6, 23, 0.22);
+}
+
+.dayflow-over-image .bg-teal-600 {
+  background-color: #16a34a !important;
+}
+
+.dayflow-over-image .hover\:bg-teal-700:hover {
+  background-color: #15803d !important;
+  box-shadow: 0 12px 30px rgba(22, 163, 74, 0.28);
+}
+
+.dayflow-over-image .bg-sky-600 {
+  background-color: #2563eb !important;
+}
+
+.dayflow-over-image .hover\:bg-sky-700:hover {
+  background-color: #1d4ed8 !important;
+  box-shadow: 0 12px 30px rgba(37, 99, 235, 0.28);
+}
+
+.dayflow-over-image .bg-emerald-700 {
+  background-color: #047857 !important;
+}
+
+.dayflow-over-image .bg-red-700 {
+  background-color: #b91c1c !important;
+}
+
+.dayflow-over-image button.border {
+  background-color: rgba(15, 23, 42, 0.34);
+}
+
+.dayflow-over-image button.border:not(:disabled):hover {
+  background-color: rgba(249, 115, 22, 0.16);
+  border-color: rgba(251, 146, 60, 0.58) !important;
+  box-shadow: 0 10px 24px rgba(2, 6, 23, 0.2);
+}
+
+.dayflow-over-image button:disabled {
+  opacity: 0.55;
+  transform: none;
+}
+
+.dayflow-over-image option {
+  background: #0f172a;
+  color: #f8fafc;
 }

@@ -5,6 +5,8 @@ import {
   ChevronDown,
   CheckCircle2,
   Clock,
+  Eye,
+  EyeOff,
   FileText,
   KeyRound,
   LogOut,
@@ -61,6 +63,8 @@ const emptyLeaveForm = {
 const MIN_WORK_MS = 7 * 60 * 60 * 1000;
 const PROFILE_IMAGE_MAX_BYTES = 1024 * 1024;
 const PROFILE_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const HERO_IMAGE_URL =
+  "https://images.unsplash.com/photo-1556761175-b413da4baf72?auto=format&fit=crop&w=1800&q=80";
 
 const editableSelfProfileFields = [
   "name",
@@ -123,6 +127,8 @@ function App() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [actionPrompt, setActionPrompt] = useState("");
+  const [previewImage, setPreviewImage] = useState(null);
+  const [activeSection, setActiveSection] = useState("overview");
 
   const isAdmin = auth?.user?.role === "ADMIN";
 
@@ -414,25 +420,37 @@ function App() {
     setNotice("");
     setActionPrompt("");
     setError("");
+    setActiveSection("overview");
   }
 
   return (
-    <main className="min-h-screen bg-[#f6f7fb] text-slate-950">
-      <section className="mx-auto flex min-h-screen max-w-6xl flex-col px-6 py-8">
-        <header className="flex items-center justify-between border-b border-slate-200 pb-4">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-normal">Dayflow HRMS</h1>
-            <p className="mt-1 text-sm text-slate-600">Human resource operations workspace</p>
-          </div>
-          <div className="flex h-10 w-10 items-center justify-center rounded-md bg-slate-950 text-white">
-            <Activity size={20} aria-hidden="true" />
+    <main className="dayflow-over-image min-h-screen bg-slate-950 bg-cover bg-fixed bg-center text-slate-100" style={{ backgroundImage: `linear-gradient(rgba(2, 6, 23, 0.46), rgba(2, 6, 23, 0.68)), url(${HERO_IMAGE_URL})` }}>
+      <section className="flex min-h-screen flex-col">
+        <header className="sticky top-0 z-30 border-b border-white/40 bg-white/65 shadow-sm backdrop-blur-md">
+          <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
+            <div>
+              <h1 className="text-2xl font-semibold tracking-normal text-slate-900">Dayflow HRMS</h1>
+              <p className="mt-1 text-sm text-slate-500">Human resource operations workspace</p>
+            </div>
+            {auth ? (
+              <ProfileDropdown
+                profile={profile}
+                user={auth.user}
+                onProfile={() => setActiveSection("profile")}
+                onLogout={logout}
+                onPreview={setPreviewImage}
+              />
+            ) : (
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-teal-600 text-white shadow-sm">
+                <Activity size={20} aria-hidden="true" />
+              </div>
+            )}
           </div>
         </header>
 
-        <div className="grid flex-1 place-items-center py-10">
-          <div className="w-full rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-            <StatusLine health={health} auth={auth} />
-            {auth ? (
+        <div className={auth ? "flex-1" : "flex-1"}>
+          {auth ? (
+            <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
               <Dashboard
                 auth={auth}
                 profile={profile}
@@ -466,25 +484,32 @@ function App() {
                 adminForm={adminForm}
                 setAdminForm={setAdminForm}
                 saveAdminProfile={saveAdminProfile}
+                onPreviewImage={setPreviewImage}
+                activeSection={activeSection}
+                setActiveSection={setActiveSection}
               />
-            ) : (
-              <AuthForm
-                mode={mode}
-                setMode={setMode}
-                form={authForm}
-                setForm={setAuthForm}
-                onSubmit={handleSubmit}
-              />
-            )}
-            {(error || notice) && (
-              <p className={`mt-4 text-sm ${error ? "text-red-600" : "text-slate-600"}`}>
-                {error || notice}
-              </p>
-            )}
-            {actionPrompt && (
-              <ActionPrompt message={actionPrompt} onClose={() => setActionPrompt("")} />
-            )}
-          </div>
+            </div>
+          ) : (
+            <PublicLanding
+              health={health}
+              mode={mode}
+              setMode={setMode}
+              form={authForm}
+              setForm={setAuthForm}
+              onSubmit={handleSubmit}
+            />
+          )}
+          {(error || notice) && (
+            <p className={`mx-auto mt-4 max-w-7xl rounded-lg border bg-white px-4 py-3 text-sm shadow-sm ${error ? "border-red-200 text-red-700" : "border-slate-200 text-slate-600"}`}>
+              {error || notice}
+            </p>
+          )}
+          {actionPrompt && (
+            <ActionPrompt message={actionPrompt} onClose={() => setActionPrompt("")} />
+          )}
+          {previewImage && (
+            <ImagePreviewModal image={previewImage} onClose={() => setPreviewImage(null)} />
+          )}
         </div>
       </section>
     </main>
@@ -512,6 +537,44 @@ function StatusLine({ health, auth }) {
   );
 }
 
+function ImagePreviewModal({ image, onClose }) {
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/70 px-4 backdrop-blur-sm" onClick={onClose}>
+      <div className="w-full max-w-3xl rounded-xl border border-white/20 bg-white/95 p-4 shadow-2xl" onClick={(event) => event.stopPropagation()}>
+        <div className="flex items-center justify-between gap-4">
+          <h2 className="text-base font-semibold text-slate-900">Profile Picture Preview</h2>
+          <button className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50" type="button" onClick={onClose}>
+            Close
+          </button>
+        </div>
+        <div className="mt-4 grid max-h-[72vh] place-items-center overflow-hidden rounded-lg bg-slate-100">
+          <img className="max-h-[72vh] w-full object-contain" src={image.src} alt={image.alt} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PublicLanding({ health, mode, setMode, form, setForm, onSubmit }) {
+  return (
+    <div className="grid min-h-[calc(100vh-73px)] place-items-center px-4 py-10 sm:px-6 lg:px-8">
+      <aside className="dayflow-auth-card w-full max-w-md rounded-xl border border-white/70 bg-white/86 px-5 py-6 shadow-2xl backdrop-blur-md sm:px-7">
+        <StatusLine health={health} auth={null} />
+        <AuthForm mode={mode} setMode={setMode} form={form} setForm={setForm} onSubmit={onSubmit} />
+      </aside>
+    </div>
+  );
+}
+
+function FeaturePill({ title, detail }) {
+  return (
+    <div className="rounded-lg border border-white/20 bg-white/12 p-3 backdrop-blur-sm">
+      <p className="text-sm font-semibold text-white">{title}</p>
+      <p className="mt-1 text-xs leading-5 text-slate-100">{detail}</p>
+    </div>
+  );
+}
+
 function ActionPrompt({ message, onClose }) {
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/30 px-4">
@@ -523,7 +586,7 @@ function ActionPrompt({ message, onClose }) {
             <p className="mt-2 text-sm leading-6 text-slate-600">{message}</p>
           </div>
         </div>
-        <button className="mt-5 w-full rounded-md bg-slate-950 px-4 py-2 text-sm font-medium text-white" type="button" onClick={onClose}>
+        <button className="mt-5 w-full rounded-md bg-teal-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-teal-700" type="button" onClick={onClose}>
           OK
         </button>
       </div>
@@ -532,21 +595,59 @@ function ActionPrompt({ message, onClose }) {
 }
 
 function AuthForm({ mode, setMode, form, setForm, onSubmit }) {
+  const [loginAs, setLoginAs] = useState("EMPLOYEE");
+  const [showPassword, setShowPassword] = useState(false);
+
   return (
-    <form className="space-y-4" onSubmit={onSubmit}>
-      <div className="inline-flex rounded-md border border-slate-300 p-1">
-        <button type="button" className={`rounded px-3 py-1.5 text-sm ${mode === "login" ? "bg-slate-950 text-white" : ""}`} onClick={() => setMode("login")}>Login</button>
-        <button type="button" className={`rounded px-3 py-1.5 text-sm ${mode === "signup" ? "bg-slate-950 text-white" : ""}`} onClick={() => setMode("signup")}>Signup</button>
+    <form className="w-full space-y-4" onSubmit={onSubmit}>
+      <div>
+        <h2 className="text-2xl font-semibold tracking-normal text-slate-900">{mode === "login" ? "Sign In" : "Create Employee Account"}</h2>
+        <p className="mt-1 text-sm text-slate-600">
+          {mode === "login" ? "Access your Dayflow HRMS workspace" : "New accounts stay pending until admin approval"}
+        </p>
       </div>
+
+      {mode === "login" && (
+        <div>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Login as</p>
+          <div className="grid grid-cols-2 gap-2 rounded-lg border border-slate-200 bg-slate-50 p-1">
+            <button type="button" className={`inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium ${loginAs === "EMPLOYEE" ? "bg-white text-green-700 shadow-sm ring-1 ring-green-300" : "text-slate-600 hover:bg-white"}`} onClick={() => setLoginAs("EMPLOYEE")}>
+              <UserRound size={16} /> Employee
+            </button>
+            <button type="button" className={`inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium ${loginAs === "ADMIN" ? "bg-white text-orange-700 shadow-sm ring-1 ring-orange-300" : "text-slate-600 hover:bg-white"}`} onClick={() => setLoginAs("ADMIN")}>
+              <KeyRound size={16} /> Admin
+            </button>
+          </div>
+        </div>
+      )}
+
       {mode === "signup" && (
         <div className="grid gap-4 sm:grid-cols-2">
           <input className="rounded-md border border-slate-300 px-3 py-2 text-sm" placeholder="Employee ID" value={form.employee_id} onChange={(e) => setForm({ ...form, employee_id: e.target.value })} />
           <input className="rounded-md border border-slate-300 px-3 py-2 text-sm" placeholder="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
         </div>
       )}
-      <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" placeholder="Email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-      <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" placeholder="Password" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
-      <button className="rounded-md bg-slate-950 px-4 py-2 text-sm font-medium text-white" type="submit">{mode === "login" ? "Login" : "Create Account"}</button>
+      <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" placeholder={mode === "login" ? "Email / Username" : "Email"} type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+      <div className="relative">
+        <input className="w-full rounded-md border border-slate-300 px-3 py-2 pr-11 text-sm" placeholder="Password" type={showPassword ? "text" : "password"} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+        <button
+          aria-label={showPassword ? "Hide password" : "Show password"}
+          className="absolute inset-y-0 right-0 inline-flex w-11 items-center justify-center rounded-r-md text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+          type="button"
+          onClick={() => setShowPassword((value) => !value)}
+        >
+          {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+        </button>
+      </div>
+      <button className="w-full rounded-md bg-teal-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-teal-700" type="submit">
+        {mode === "login" ? `Sign In as ${loginAs === "ADMIN" ? "Admin" : "Employee"}` : "Create Account"}
+      </button>
+      <p className="text-center text-sm text-slate-600">
+        {mode === "login" ? "New Employee? " : "Already have an account? "}
+        <button className="font-semibold text-orange-600 hover:text-orange-700" type="button" onClick={() => setMode(mode === "login" ? "signup" : "login")}>
+          {mode === "login" ? "Register here" : "Sign in"}
+        </button>
+      </p>
     </form>
   );
 }
@@ -566,10 +667,11 @@ function Dashboard(props) {
     leaves,
     submitLeaveRequest,
     payroll,
-    logout,
     isAdmin,
+    onPreviewImage,
+    activeSection,
+    setActiveSection,
   } = props;
-  const [activeSection, setActiveSection] = useState("overview");
   const pendingLeaves = props.adminLeaves?.filter((leave) => leave.status === "PENDING").length || 0;
   const pendingRegistrations = props.adminRegistrations?.filter((item) => item.status === "PENDING").length || 0;
   const todayAttendance = attendance.find((record) => record.date === formatDateKey(new Date()));
@@ -579,38 +681,32 @@ function Dashboard(props) {
     { id: "leaves", label: "Leave", icon: FileText },
     { id: "payroll", label: "Payroll", icon: Wallet },
     ...(isAdmin ? [{ id: "users", label: "User Information", icon: KeyRound }] : []),
+    ...(isAdmin ? [{ id: "admin-attendance", label: "Admin Attendance", icon: Clock }] : []),
+    ...(isAdmin ? [{ id: "admin-payroll", label: "Admin Payroll", icon: Wallet }] : []),
     ...(isAdmin ? [{ id: "admin", label: "Admin", icon: Users }] : []),
   ];
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-slate-200 bg-gradient-to-r from-white via-slate-50 to-emerald-50 p-4 shadow-sm">
-        <div className="flex min-w-0 items-center gap-3">
-          <ProfileAvatar profile={profile} name={auth.user.name} size="lg" />
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-slate-950">{auth.user.name}</p>
-            <p className="mt-1 truncate text-sm text-slate-600">{auth.user.email} - {auth.user.role}</p>
-          </div>
-        </div>
-        <ProfileDropdown
-          profile={profile}
-          user={auth.user}
-          onProfile={() => setActiveSection("profile")}
-          onLogout={logout}
-        />
-      </div>
-
       <ModuleNav modules={modules} activeSection={activeSection} setActiveSection={setActiveSection} />
 
       {activeSection === "overview" && (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <DashboardCard title="Profile" value={profile?.job_details || "Profile ready"} detail={profile?.employee_id || auth.user.employee_id} icon={UserRound} onClick={() => setActiveSection("profile")} />
-          <DashboardCard title="Attendance" value={todayAttendance ? "Checked in today" : "No check-in today"} detail={`${attendance.length} recent records`} icon={Clock} onClick={() => setActiveSection("attendance")} />
-          <DashboardCard title="Leave" value={`${leaves.length} requests`} detail={isAdmin ? `${pendingLeaves} pending approvals` : "Track approval status"} icon={FileText} onClick={() => setActiveSection("leaves")} />
-          <DashboardCard title="Payroll" value={formatCurrency(payroll?.net_salary)} detail="Current net salary" icon={Wallet} onClick={() => setActiveSection("payroll")} />
-          {isAdmin && <DashboardCard title="User Information" value={`${props.adminUsers.length} accounts`} detail="Emails, employee IDs, and passwords" icon={KeyRound} onClick={() => setActiveSection("users")} />}
-          {isAdmin && <DashboardCard title="Admin" value={`${pendingRegistrations} signup approvals`} detail={`${props.adminProfiles.length} employees`} icon={Users} onClick={() => setActiveSection("admin")} />}
-        </div>
+        <HomeOverview
+          auth={auth}
+          profile={profile}
+          attendance={attendance}
+          leaves={leaves}
+          payroll={payroll}
+          isAdmin={isAdmin}
+          pendingLeaves={pendingLeaves}
+          pendingRegistrations={pendingRegistrations}
+          adminUsers={props.adminUsers}
+          adminProfiles={props.adminProfiles}
+          adminAttendance={props.adminAttendance}
+          adminPayroll={props.adminPayroll}
+          todayAttendance={todayAttendance}
+          setActiveSection={setActiveSection}
+        />
       )}
 
       {activeSection === "profile" && (
@@ -619,6 +715,7 @@ function Dashboard(props) {
           profileForm={profileForm}
           setProfileForm={setProfileForm}
           saveMyProfile={saveMyProfile}
+          onPreviewImage={onPreviewImage}
         />
       )}
 
@@ -644,12 +741,24 @@ function Dashboard(props) {
 
       {activeSection === "payroll" && <PayrollPanel auth={auth} profile={profile} payroll={payroll} />}
 
+      {isAdmin && activeSection === "admin-attendance" && (
+        <AdminAttendancePanel records={props.adminAttendance} />
+      )}
+
+      {isAdmin && activeSection === "admin-payroll" && (
+        <AdminPayrollPanel
+          records={props.adminPayroll}
+          onSave={props.saveAdminPayroll}
+        />
+      )}
+
       {isAdmin && activeSection === "users" && (
         <AdminAccountPanel
           users={props.adminUsers}
           profiles={props.adminProfiles}
           attendance={props.adminAttendance}
           leaves={props.adminLeaves}
+          onPreviewImage={onPreviewImage}
           currentEmployeeId={auth.user.employee_id}
           onRoleSave={props.saveAdminUserRole}
           onStatusSave={props.saveAdminUserStatus}
@@ -667,11 +776,6 @@ function Dashboard(props) {
             onLeaveDecision={props.decideLeave}
           />
           <AdminProfilePanel {...props} />
-          <AdminAttendancePanel records={props.adminAttendance} />
-          <AdminPayrollPanel
-            records={props.adminPayroll}
-            onSave={props.saveAdminPayroll}
-          />
         </div>
       )}
     </div>
@@ -680,11 +784,11 @@ function Dashboard(props) {
 
 function ModuleNav({ modules, activeSection, setActiveSection }) {
   return (
-    <div className="flex gap-2 overflow-x-auto rounded-lg border border-slate-200 bg-white p-2 shadow-sm">
+    <div className="flex gap-1 overflow-x-auto rounded-xl border border-white/50 bg-white/68 p-1.5 shadow-sm backdrop-blur-md">
       {modules.map((module) => {
         const Icon = module.icon;
         return (
-          <button key={module.id} className={`inline-flex items-center gap-2 whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium ${activeSection === module.id ? "bg-slate-950 text-white" : "text-slate-700 hover:bg-slate-100"}`} type="button" onClick={() => setActiveSection(module.id)}>
+          <button key={module.id} className={`inline-flex items-center gap-2 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition ${activeSection === module.id ? "bg-white text-teal-700 shadow-sm ring-1 ring-slate-200" : "text-slate-600 hover:bg-white hover:text-slate-900"}`} type="button" onClick={() => setActiveSection(module.id)}>
             <Icon size={16} /> {module.label}
           </button>
         );
@@ -693,7 +797,7 @@ function ModuleNav({ modules, activeSection, setActiveSection }) {
   );
 }
 
-function ProfileDropdown({ profile, user, onProfile, onLogout }) {
+function ProfileDropdown({ profile, user, onProfile, onLogout, onPreview }) {
   const [open, setOpen] = useState(false);
 
   function handleProfile() {
@@ -707,16 +811,15 @@ function ProfileDropdown({ profile, user, onProfile, onLogout }) {
   }
 
   return (
-    <div className="relative">
-      <button className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 shadow-sm hover:bg-slate-50" type="button" onClick={() => setOpen(!open)}>
-        <ProfileAvatar profile={profile} name={user.name} size="sm" />
-        Account
+    <div className="relative flex items-center gap-2">
+      <ProfileAvatar profile={profile} name={user.name} size="sm" onPreview={onPreview} />
+      <button className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/50 bg-white/70 text-slate-800 backdrop-blur hover:bg-white" type="button" onClick={() => setOpen(!open)} aria-label="Open profile menu">
         <ChevronDown size={16} />
       </button>
       {open && (
-        <div className="absolute right-0 z-20 mt-2 w-48 overflow-hidden rounded-md border border-slate-200 bg-white shadow-lg">
+        <div className="absolute right-0 top-full z-20 mt-2 w-48 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg">
           <button className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-slate-700 hover:bg-slate-50" type="button" onClick={handleProfile}>
-            <UserRound size={16} /> Profile
+            <UserRound size={16} /> My Profile
           </button>
           <button className="flex w-full items-center gap-2 border-t border-slate-100 px-4 py-3 text-left text-sm text-red-700 hover:bg-red-50" type="button" onClick={handleLogout}>
             <LogOut size={16} /> Logout
@@ -727,7 +830,7 @@ function ProfileDropdown({ profile, user, onProfile, onLogout }) {
   );
 }
 
-function ProfileAvatar({ profile, name, size = "md" }) {
+function ProfileAvatar({ profile, name, size = "md", onPreview }) {
   const dimensions = size === "lg" ? "h-12 w-12" : "h-8 w-8";
   const initials = String(name || "U")
     .split(" ")
@@ -738,16 +841,21 @@ function ProfileAvatar({ profile, name, size = "md" }) {
 
   if (profile?.profile_picture_url) {
     return (
-      <img
-        className={`${dimensions} shrink-0 rounded-full border border-slate-200 bg-slate-100 object-cover`}
-        alt={`${name || "User"} profile`}
-        src={profile.profile_picture_url}
-      />
+      <button className={`${dimensions} shrink-0 overflow-hidden rounded-full border border-white/70 bg-slate-100 shadow-sm ring-1 ring-slate-200`} type="button" onClick={(event) => {
+        event.stopPropagation();
+        onPreview?.({ src: profile.profile_picture_url, alt: `${name || "User"} profile` });
+      }}>
+        <img
+          className="h-full w-full object-cover"
+          alt={`${name || "User"} profile`}
+          src={profile.profile_picture_url}
+        />
+      </button>
     );
   }
 
   return (
-    <span className={`${dimensions} grid shrink-0 place-items-center rounded-full bg-slate-950 text-xs font-semibold text-white`}>
+    <span className={`${dimensions} grid shrink-0 place-items-center rounded-full bg-teal-600 text-xs font-semibold text-white`}>
       {initials}
     </span>
   );
@@ -755,18 +863,121 @@ function ProfileAvatar({ profile, name, size = "md" }) {
 
 function DashboardCard({ title, value, detail, icon: Icon, onClick }) {
   return (
-    <button className="rounded-lg border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md" type="button" onClick={onClick}>
+    <button className="rounded-xl border border-white/50 bg-white/72 p-4 text-left shadow-sm backdrop-blur-md transition hover:border-teal-200 hover:bg-white/88 hover:shadow-md" type="button" onClick={onClick}>
       <div className="flex items-center justify-between gap-3">
         <p className="text-sm font-medium text-slate-600">{title}</p>
-        <Icon size={18} className="text-slate-500" />
+        <span className="grid h-8 w-8 place-items-center rounded-lg bg-teal-50 text-teal-700">
+          <Icon size={18} />
+        </span>
       </div>
-      <p className="mt-3 text-lg font-semibold text-slate-950">{value}</p>
+      <p className="mt-3 text-lg font-semibold text-slate-900">{value}</p>
       <p className="mt-1 text-sm text-slate-600">{detail}</p>
     </button>
   );
 }
 
-function ProfilePanel({ profile, profileForm, setProfileForm, saveMyProfile }) {
+function HomeOverview({
+  auth,
+  profile,
+  attendance,
+  leaves,
+  payroll,
+  isAdmin,
+  pendingLeaves,
+  pendingRegistrations,
+  adminUsers,
+  adminProfiles,
+  adminAttendance,
+  adminPayroll,
+  todayAttendance,
+  setActiveSection,
+}) {
+  const shortcuts = [
+    { id: "attendance", label: todayAttendance ? "Open Attendance" : "Check In", detail: `${attendance.length} monthly records`, icon: Clock },
+    { id: "leaves", label: "Request Leave", detail: `${leaves.length} requests tracked`, icon: FileText },
+    { id: "payroll", label: "View Salary Slip", detail: formatCurrency(payroll?.net_salary), icon: Wallet },
+    { id: "profile", label: "Update Profile", detail: profile?.employee_id || auth.user.employee_id, icon: UserRound },
+    ...(isAdmin
+      ? [
+          { id: "users", label: "Employee Directory", detail: `${adminUsers.length} users`, icon: Users },
+          { id: "admin-attendance", label: "Admin Attendance", detail: `${adminAttendance.length} records`, icon: Clock },
+          { id: "admin-payroll", label: "Admin Payroll", detail: `${adminPayroll.length} salary records`, icon: Wallet },
+          { id: "admin", label: "Approvals", detail: `${pendingRegistrations + pendingLeaves} waiting`, icon: CheckCircle2 },
+        ]
+      : []),
+  ];
+
+  return (
+    <div className="space-y-6">
+      <section
+        className="relative -mx-4 overflow-hidden bg-slate-950/62 px-4 py-10 text-white shadow-sm backdrop-blur-[1px] sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8"
+      >
+        <div className="mx-auto max-w-7xl">
+          <div className="max-w-3xl">
+            <p className="text-sm font-medium uppercase tracking-wide text-teal-100">Overview</p>
+            <h2 className="mt-4 text-3xl font-semibold tracking-normal sm:text-4xl">Your HR workspace for today’s attendance, leave requests, salary records, and employee operations.</h2>
+            <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-100">
+              Use the shortcuts below to jump into common work. Each module is connected to real Dayflow records, so changes update the dashboard immediately.
+            </p>
+          </div>
+          <div className="mt-8 grid gap-3 sm:grid-cols-3">
+            <FeaturePill title={todayAttendance ? "Checked in today" : "Ready for check-in"} detail="Attendance uses real timestamps" />
+            <FeaturePill title={`${leaves.length} leave records`} detail="Track pending and approved time off" />
+            <FeaturePill title={formatCurrency(payroll?.net_salary)} detail="Current net salary view" />
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-8 py-2 lg:grid-cols-[0.9fr_1.1fr]">
+        <div>
+          <h3 className="text-base font-semibold text-slate-900">Quick Shortcuts</h3>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+            {shortcuts.map((item) => (
+              <ShortcutLink key={item.id} item={item} onClick={() => setActiveSection(item.id)} />
+            ))}
+          </div>
+        </div>
+        <div>
+          <h3 className="text-base font-semibold text-slate-900">What Each Tab Does</h3>
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            <ModuleInfo title="Attendance" detail="Check in, watch the live 7-hour timer, check out, and print attendance slips." />
+            <ModuleInfo title="Leave" detail="Apply for paid, sick, or unpaid leave and print approved leave slips with reasons." />
+            <ModuleInfo title="Payroll" detail="View salary details, leave deductions, and printable salary slips." />
+            <ModuleInfo title="My Profile" detail="Update personal details, family details, phone, address, and profile picture." />
+            {isAdmin && <ModuleInfo title="User Information" detail={`Review ${adminProfiles.length} employee profiles with avatars and work status.`} />}
+            {isAdmin && <ModuleInfo title="Admin Tools" detail="Approve signups and leave requests, filter attendance, and manage payroll records." />}
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function ShortcutLink({ item, onClick }) {
+  const Icon = item.icon;
+  return (
+    <button className="group flex items-center gap-3 border-b border-slate-200 py-3 text-left hover:border-teal-300" type="button" onClick={onClick}>
+      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-white text-teal-700 shadow-sm ring-1 ring-slate-200 group-hover:ring-teal-200">
+        <Icon size={18} />
+      </span>
+      <span>
+        <span className="block text-sm font-semibold text-slate-900 group-hover:text-teal-700">{item.label}</span>
+        <span className="mt-0.5 block text-xs text-slate-500">{item.detail}</span>
+      </span>
+    </button>
+  );
+}
+
+function ModuleInfo({ title, detail }) {
+  return (
+    <article className="border-l-2 border-teal-500 bg-white/60 py-1 pl-4">
+      <h4 className="text-sm font-semibold text-slate-900">{title}</h4>
+      <p className="mt-2 text-sm leading-6 text-slate-600">{detail}</p>
+    </article>
+  );
+}
+
+function ProfilePanel({ profile, profileForm, setProfileForm, saveMyProfile, onPreviewImage }) {
   function handleProfilePictureUpload(event) {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -795,7 +1006,7 @@ function ProfilePanel({ profile, profileForm, setProfileForm, saveMyProfile }) {
           <h3 className="text-base font-semibold tracking-normal">My Profile</h3>
           <p className="mt-1 text-sm text-slate-600">Personal details, family details, and account identity</p>
         </div>
-        <ProfileAvatar profile={{ profile_picture_url: profileForm.profile_picture_url }} name={profileForm.name || profile?.name} size="lg" />
+        <ProfileAvatar profile={{ profile_picture_url: profileForm.profile_picture_url }} name={profileForm.name || profile?.name} size="lg" onPreview={onPreviewImage} />
       </div>
       <form className="mt-5 space-y-5" onSubmit={saveMyProfile}>
         <div className="grid gap-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm lg:grid-cols-3">
@@ -822,7 +1033,7 @@ function ProfilePanel({ profile, profileForm, setProfileForm, saveMyProfile }) {
           <Readonly label="Salary Structure" value={profile?.salary_structure} />
           <Readonly label="Documents" value={profile?.documents_metadata} />
         </div>
-        <button className="inline-flex items-center gap-2 rounded-md bg-slate-950 px-4 py-2 text-sm font-medium text-white shadow-sm" type="submit"><Save size={16} /> Save Profile</button>
+        <button className="inline-flex items-center gap-2 rounded-md bg-teal-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-teal-700" type="submit"><Save size={16} /> Save Profile</button>
       </form>
     </section>
   );
@@ -863,10 +1074,10 @@ function AttendancePanel({ auth, attendance, onCheckIn, onCheckOut }) {
           <p className="mt-1 text-sm text-slate-600">Daily actions and recent attendance</p>
         </div>
         <div className="flex gap-2">
-          <button className="inline-flex items-center gap-2 rounded-md bg-emerald-700 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-slate-300" type="button" onClick={onCheckIn} disabled={Boolean(todayRecord)}>
+          <button className="inline-flex items-center gap-2 rounded-md bg-teal-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-teal-700 disabled:cursor-not-allowed disabled:bg-slate-300" type="button" onClick={onCheckIn} disabled={Boolean(todayRecord)}>
             <Clock size={16} /> Check In
           </button>
-          <button className="inline-flex items-center gap-2 rounded-md bg-slate-950 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-slate-300" type="button" onClick={handleCheckOut} disabled={!todayRecord || Boolean(todayRecord.check_out)}>
+          <button className="inline-flex items-center gap-2 rounded-md bg-sky-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-slate-300" type="button" onClick={handleCheckOut} disabled={!todayRecord || Boolean(todayRecord.check_out)}>
             <Clock size={16} /> Check Out
           </button>
           <button className="inline-flex items-center gap-2 rounded-md border border-slate-300 px-4 py-2 text-sm font-medium" type="button" onClick={() => printAttendanceSlip(auth.user, attendance)}>
@@ -924,7 +1135,7 @@ function EarlyCheckoutDialog({ workedMs, remainingMs, onCancel, onConfirm }) {
         </div>
         <div className="mt-5 flex flex-wrap justify-end gap-2">
           <button className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium" type="button" onClick={onCancel}>Continue Working</button>
-          <button className="rounded-md bg-slate-950 px-4 py-2 text-sm font-medium text-white" type="button" onClick={onConfirm}>Check Out Anyway</button>
+          <button className="rounded-md bg-sky-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-sky-700" type="button" onClick={onConfirm}>Check Out Anyway</button>
         </div>
       </div>
     </div>
@@ -980,7 +1191,7 @@ function LeavePanel({ auth, payroll, form, setForm, leaves, onSubmit }) {
         <Input label="End Date" type="date" value={form.end_date} onChange={(value) => setForm({ ...form, end_date: value })} required />
         <Input label="Remarks" value={form.remarks} onChange={(value) => setForm({ ...form, remarks: value })} />
         <div className="flex items-end">
-          <button className="inline-flex items-center gap-2 rounded-md bg-slate-950 px-4 py-2 text-sm font-medium text-white" type="submit"><Send size={16} /> Apply</button>
+          <button className="inline-flex items-center gap-2 rounded-md bg-teal-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-teal-700" type="submit"><Send size={16} /> Apply</button>
         </div>
       </form>
       <LeaveTable records={leaves} user={auth.user} onPrint={printLeaveSlip} emptyText="No leave requests yet." />
@@ -1141,14 +1352,17 @@ function AdminRequestsPanel({ registrations, onRegistrationDecision, leaves, pro
   );
 }
 
-function AdminAccountPanel({ users, profiles = [], attendance = [], leaves = [], currentEmployeeId, onRoleSave, onStatusSave, onPasswordSave }) {
+function AdminAccountPanel({ users, profiles = [], attendance = [], leaves = [], currentEmployeeId, onRoleSave, onStatusSave, onPasswordSave, onPreviewImage }) {
   const [roles, setRoles] = useState({});
   const [passwords, setPasswords] = useState({});
   const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState("");
   const profileByEmployeeId = Object.fromEntries(profiles.map((profile) => [profile.employee_id, profile]));
   const filteredUsers = users.filter((user) => {
     const haystack = `${user.name} ${user.employee_id} ${user.email} ${user.role}`.toLowerCase();
-    return !search || haystack.includes(search.toLowerCase());
+    const matchesSearch = !search || haystack.includes(search.toLowerCase());
+    const matchesRole = !roleFilter || user.role === roleFilter;
+    return matchesSearch && matchesRole;
   });
 
   if (!users.length) {
@@ -1178,7 +1392,14 @@ function AdminAccountPanel({ users, profiles = [], attendance = [], leaves = [],
     <section className="border-t border-slate-200 pt-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h3 className="text-base font-semibold tracking-normal">Employee Directory</h3>
-        <input className="rounded-md border border-slate-300 px-3 py-2 text-sm" placeholder="Search employees" value={search} onChange={(event) => setSearch(event.target.value)} />
+        <div className="flex flex-wrap gap-2">
+          <input className="rounded-md border border-slate-300 px-3 py-2 text-sm" placeholder="Search employees" value={search} onChange={(event) => setSearch(event.target.value)} />
+          <select className="rounded-md border border-slate-300 px-3 py-2 text-sm" value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)}>
+            <option value="">All Roles</option>
+            <option value="EMPLOYEE">Employees</option>
+            <option value="ADMIN">Admins</option>
+          </select>
+        </div>
       </div>
       <div className="mt-4 overflow-x-auto rounded-md border border-slate-200">
         <table className="w-full min-w-[1080px] border-collapse text-left text-sm">
@@ -1202,13 +1423,13 @@ function AdminAccountPanel({ users, profiles = [], attendance = [], leaves = [],
               return (
                 <tr key={user.employee_id} className="border-t border-slate-200 align-top">
                   <td className="px-3 py-2">
-                    <button className="flex items-center gap-3 text-left" type="button">
-                      <ProfileAvatar profile={profile} name={user.name} size="sm" />
+                    <div className="flex items-center gap-3 text-left">
+                      <ProfileAvatar profile={profile} name={user.name} size="sm" onPreview={onPreviewImage} />
                       <span>
                         <span className="block font-medium text-slate-900">{user.name}</span>
                         <span className="block text-xs text-slate-500">{profile?.job_details || "Employee"}</span>
                       </span>
-                    </button>
+                    </div>
                   </td>
                   <td className="px-3 py-2">{user.employee_id}</td>
                   <td className="px-3 py-2">{user.email}</td>
@@ -1223,12 +1444,12 @@ function AdminAccountPanel({ users, profiles = [], attendance = [], leaves = [],
                   <td className="px-3 py-2">
                     <form className="flex min-w-[280px] gap-2" onSubmit={(event) => savePassword(event, user)}>
                       <input className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" minLength={8} placeholder="New password" type="password" value={passwordValue(user)} onChange={(event) => setPasswords({ ...passwords, [user.employee_id]: event.target.value })} required />
-                      <button className="inline-flex items-center gap-2 rounded-md bg-slate-950 px-3 py-2 text-sm font-medium text-white" type="submit"><KeyRound size={16} /> Reset</button>
+                      <button className="inline-flex items-center gap-2 rounded-md bg-teal-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-teal-700" type="submit"><KeyRound size={16} /> Reset</button>
                     </form>
                   </td>
                   <td className="px-3 py-2">
                     <div className="flex min-w-[250px] flex-wrap gap-2">
-                      <button className="inline-flex items-center gap-2 rounded-md bg-slate-950 px-3 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-slate-300" type="button" disabled={isSelf} onClick={() => onRoleSave(user.employee_id, roleValue(user))}><Save size={16} /> Save Role</button>
+                      <button className="inline-flex items-center gap-2 rounded-md bg-teal-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-teal-700 disabled:cursor-not-allowed disabled:bg-slate-300" type="button" disabled={isSelf} onClick={() => onRoleSave(user.employee_id, roleValue(user))}><Save size={16} /> Save Role</button>
                       <button className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:bg-slate-100" type="button" disabled={isSelf} onClick={() => onStatusSave(user.employee_id, !user.is_active)}>
                         {user.is_active ? "Deactivate" : "Reactivate"}
                       </button>
@@ -1352,7 +1573,7 @@ function AdminPayrollPanel({ records, onSave }) {
                   </td>
                   <td className="px-3 py-2">{formatCurrency(record.net_salary)}</td>
                   <td className="px-3 py-2">
-                    <button className="inline-flex items-center gap-2 rounded-md bg-slate-950 px-4 py-2 text-sm font-medium text-white" type="button" onClick={(event) => submitPayroll(event, record)}><Save size={16} /> Save</button>
+                    <button className="inline-flex items-center gap-2 rounded-md bg-teal-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-teal-700" type="button" onClick={(event) => submitPayroll(event, record)}><Save size={16} /> Save</button>
                   </td>
                 </tr>
               ))
@@ -1383,7 +1604,7 @@ function AdminProfilePanel({ adminProfiles, selectedEmployeeId, selectAdminProfi
           <Input key={field} label={field.replaceAll("_", " ")} value={adminForm[field]} onChange={(value) => setAdminForm({ ...adminForm, [field]: value })} />
         ))}
       </div>
-      <button className="mt-4 inline-flex items-center gap-2 rounded-md bg-slate-950 px-4 py-2 text-sm font-medium text-white" type="submit"><Save size={16} /> Save Employee</button>
+      <button className="mt-4 inline-flex items-center gap-2 rounded-md bg-teal-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-teal-700" type="submit"><Save size={16} /> Save Employee</button>
     </form>
   );
 }

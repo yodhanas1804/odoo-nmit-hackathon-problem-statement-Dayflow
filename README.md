@@ -1,216 +1,172 @@
 # Dayflow HRMS
 
-Dayflow is a planned Human Resource Management System for the Odoo NMIT hackathon.
+Dayflow is a Human Resource Management System built for the Odoo NMIT hackathon. It includes a FastAPI backend, a React + Tailwind frontend, JWT authentication, employee self-service workflows, and admin management tools.
 
-## Phase 0 Status
+## Tech Stack
 
-- Repository inspected on branch `main`.
-- Remote: `origin` -> `https://github.com/yodhanas1804/odoo-nmit-hackathon-problem-statement-Dayflow.git`
-- Existing application code: none.
-- Selected stack:
-  - Frontend: React + Tailwind CSS
-  - Backend: FastAPI
-  - Database: PostgreSQL-compatible setup
+- Frontend: React, Vite, Tailwind CSS, lucide-react icons
+- Backend: FastAPI, SQLAlchemy, Pydantic, python-jose JWT
+- Database: SQLite by default, configurable through `DATABASE_URL`
+- Tests: Pytest for backend API coverage
 
-## Planned Modules
+## Project Structure
 
-- Authentication with `EMPLOYEE` and `ADMIN` roles.
-- Employee profile management.
-- Attendance check-in/check-out and daily/weekly views.
-- Leave request workflow with admin approval or rejection.
-- Payroll visibility for employees and payroll management for admins.
+```text
+backend/
+  app/
+    auth.py          Authentication, signup requests, login, admin account APIs
+    attendance.py    Check-in/check-out and attendance history APIs
+    config.py        Environment-driven application settings
+    database.py      SQLAlchemy engine, sessions, and base model setup
+    demo_data.py     Demo employee/admin seed data
+    leaves.py        Leave request and admin approval APIs
+    main.py          FastAPI app setup, CORS, routers, and health endpoint
+    models.py        SQLAlchemy data models and enums
+    payroll.py       Payroll read/update and salary calculation logic
+    profiles.py      Employee and admin profile APIs
+    schemas.py       Request/response validation schemas
+    security.py      Password hashing and JWT helpers
+  tests/
+    conftest.py      Test database and FastAPI test client fixtures
+    test_api.py      End-to-end API workflow tests
+frontend/
+  src/
+    api.js           Fetch client for backend endpoints
+    App.jsx          Main application UI and dashboard workflows
+    main.jsx         React entry point
+    styles.css       Tailwind import and global visual styles
+```
 
-## Planned Data Model
+## Modules
 
-### User
+### Authentication and Registration
 
-- `id`
-- `employee_id`
-- `name`
-- `email`
-- `password_hash`
-- `role`
-- `created_at`
+- Public users can submit signup requests.
+- Signup requests stay `PENDING` until an admin approves them.
+- Public signup always creates an employee registration, even if the submitted role is admin.
+- Approved users can log in with email and password.
+- Passwords are hashed before storage.
+- JWT bearer tokens protect authenticated endpoints.
+- The login/signup password field includes an eye toggle to show or hide the typed password.
 
-### Employee Profile
+### Roles and Authorization
 
-- `id`
-- `user_id`
-- `personal_details`
-- `job_details`
-- `address`
-- `phone`
-- `profile_picture_url`
-- `documents_metadata`
+- Supported roles are `EMPLOYEE` and `ADMIN`.
+- Employees can access only their own records.
+- Admin-only APIs reject employee tokens.
+- Admins can view their own admin profile through `/admin/users/me`.
+- Admins cannot deactivate or demote their own account.
+
+### Admin Account Management
+
+- Admins can list active users.
+- Admins can promote or demote other users.
+- Admins can deactivate or reactivate other users.
+- Admins can reset employee passwords.
+- Admins can approve or reject pending registration requests with comments.
+
+### Employee Profiles
+
+- A profile is created during account approval and lazy-created for existing users when needed.
+- Employees can view their own profile.
+- Employees can edit allowed self-service fields such as name, address, phone, parents' names, and profile picture URL.
+- Admins can list all profiles.
+- Admins can update personal details, job details, salary structure notes, document metadata, contact fields, and profile picture URLs.
+- The frontend supports profile picture preview from URL or uploaded image data.
 
 ### Attendance
 
-- `id`
-- `employee_id`
-- `date`
-- `check_in`
-- `check_out`
-- `status`
+- Employees can check in once per day.
+- Employees can check out once after checking in.
+- Duplicate check-ins and duplicate check-outs are rejected.
+- Employees can view recent personal attendance.
+- Admins can view recent attendance for all employees.
+- The UI shows worked duration and whether the 7-hour minimum was completed.
+- Admin views include a current work-status indicator for present, approved leave, or absent.
 
-### Leave Request
+### Leave Management
 
-- `id`
-- `employee_id`
-- `leave_type`
-- `start_date`
-- `end_date`
-- `remarks`
-- `status`
-- `admin_comment`
-- `created_at`
+- Employees can request `PAID`, `SICK`, or `UNPAID` leave.
+- Leave requests include start date, end date, and remarks.
+- Invalid date ranges are rejected.
+- Employees can track their own leave status.
+- Admins can approve or reject leave requests with comments.
+- Approved leave slips can be printed from the frontend.
 
 ### Payroll
 
-- `id`
-- `employee_id`
-- `basic_salary`
-- `allowances`
-- `deductions`
-- `net_salary`
+- Employees can view their own payroll only.
+- Admins can view payroll records for all employees.
+- Admins can update basic salary, allowances, and deductions.
+- Net salary is calculated as basic salary plus allowances minus fixed deductions and leave deduction.
+- Leave usage is reflected in payroll summaries.
+- Employees can print salary slips from the frontend.
 
-## Planned API Surface
+### Frontend Dashboard
 
-- `GET /health`
-- `POST /auth/signup`
-- `POST /auth/login`
-- `GET /users/me`
-- `GET /profiles/me`
-- `PATCH /profiles/me`
-- `GET /admin/profiles`
-- `PATCH /admin/profiles/{employee_id}`
-- `POST /attendance/check-in`
-- `POST /attendance/check-out`
-- `GET /attendance/me`
-- `GET /admin/attendance`
-- `POST /leaves`
-- `GET /leaves/me`
-- `GET /admin/leaves`
-- `PATCH /admin/leaves/{leave_id}`
-- `GET /payroll/me`
-- `GET /admin/payroll`
-- `PATCH /admin/payroll/{employee_id}`
+- Public screen supports login and employee registration.
+- Authenticated employees get dashboard sections for overview, profile, attendance, leave, and payroll.
+- Admin users get additional sections for registration approvals, user information, employee profiles, attendance, leave approvals, and payroll management.
+- Dashboard data loading errors are shown in the interface.
+- Successful actions show a confirmation prompt.
+- The app reads `VITE_API_BASE_URL` and defaults to `http://localhost:8000`.
 
-## Phase 1 Status
+### Demo Data
 
-- FastAPI backend foundation added.
-- `GET /health` endpoint added.
-- React + Tailwind frontend foundation added.
-- Frontend reads `VITE_API_BASE_URL` and calls backend health endpoint.
-- Basic frontend loading/error states added.
-
-## Phase 2 Status
-
-- SQLAlchemy user schema added.
-- Signup and login APIs added with password hashing.
-- JWT bearer authentication added.
-- Employee and admin protected endpoints added.
-- React login/signup UI added.
-- Role-aware dashboard placeholder added.
-- Employee users are blocked from admin-only API access.
-
-## Phase 3 Status
-
-- Employee profile schema added.
-- Profile records are created on signup and lazy-created for existing users.
-- Employees can view their own profile.
-- Employees can edit only address, phone, and profile picture URL.
-- Admins can list employee profiles.
-- Admins can update profile details, job details, salary structure, documents metadata, address, phone, and profile picture URL.
-- Backend authorization enforces profile access rules.
-- Frontend profile view and edit forms added.
-
-## Phase 4 Status
-
-- Attendance schema added with one record per employee per date.
-- Employee check-in and check-out APIs added.
-- Duplicate same-day check-ins and check-outs are blocked.
-- Employees can view their own recent attendance.
-- Admins can view recent attendance for all employees.
-- Frontend attendance actions and recent attendance tables added.
-
-## Phase 5 Status
-
-- Leave request schema added.
-- Employees can create paid, sick, and unpaid leave requests.
-- New leave requests are created with `PENDING` status.
-- Employees can view their own leave requests and approval status.
-- Admins can view all leave requests.
-- Admins can approve or reject leave requests with comments.
-- Backend authorization enforces employee and admin leave access rules.
-
-## Phase 6 Status
-
-- Payroll schema added.
-- Employees can view only their own payroll.
-- Employee payroll access is read-only.
-- Admins can view payroll for all employees.
-- Admins can update salary structure values.
-- Net salary is calculated from basic salary plus allowances minus deductions.
-- Backend authorization enforces payroll access rules.
-
-## Phase 7 Status
-
-- Role-specific dashboard navigation added.
-- Employee dashboard links profile, attendance, leave requests, and payroll.
-- Admin dashboard links employee profiles, attendance, leave approvals, and payroll management.
-- Logout remains available from the authenticated dashboard.
-- Demo accounts and sample records are seeded automatically on backend startup.
-- Full workflow can be tested without manual database edits.
-
-## Phase 8 Status
-
-- Critical workflows verified for demo readiness.
-- Dashboard data loading errors are surfaced in the UI.
-- Demo data seeding can be disabled with `SEED_DEMO_DATA=false`.
-- Frontend production build passes.
-- Backend compile/import checks pass.
-- Authentication, authorization, profile, attendance, leave, payroll, and dashboard workflows verified.
-
-## Implemented Features
-
-- JWT-based signup and login.
-- Public signup creates a pending registration request.
-- Admin approval is required before a new account can log in.
-- `EMPLOYEE` and `ADMIN` role-based access control.
-- Employee profile viewing and limited employee editing.
-- Admin employee profile management.
-- Admin account management for role promotion, deactivation/reactivation, and password reset.
-- Attendance check-in, check-out, employee view, and admin view.
-- Leave request creation, employee status tracking, and admin approval or rejection.
-- Employee payroll visibility.
-- Admin payroll management with net salary calculation.
-- Role-specific dashboard navigation.
-- Automatic demo seed data for local demos.
-
-## Demo Accounts
-
-These accounts are created automatically when the backend starts:
+Demo records are seeded automatically when the backend starts unless disabled.
 
 ```text
 Employee: employee.dayflow@example.com / password123
 Admin: admin.dayflow@example.com / password123
 ```
 
-## Demo Flow
+Set `SEED_DEMO_DATA=false` to disable automatic demo data.
 
-1. Submit a signup request from the Signup form.
-2. Login as the admin.
-3. Open Admin and approve or reject the signup request.
-4. Logout.
-5. Login as the approved employee.
-6. Open Profile and verify employee details.
-7. Open Attendance and check in.
-8. Open Leave and submit a request.
-9. Logout.
-10. Login as the admin.
-11. Open Admin and approve or reject the leave request.
-12. Review attendance and payroll in the Admin dashboard.
-13. Login as the employee again and verify the updated leave status.
+## API Endpoints
+
+### Health
+
+- `GET /health`
+
+### Auth and Users
+
+- `POST /auth/signup`
+- `POST /auth/login`
+- `GET /users/me`
+- `GET /admin/users/me`
+- `GET /admin/registrations`
+- `PATCH /admin/registrations/{request_id}`
+- `GET /admin/users`
+- `PATCH /admin/users/{employee_id}/role`
+- `PATCH /admin/users/{employee_id}/status`
+- `PATCH /admin/users/{employee_id}/password`
+
+### Profiles
+
+- `GET /profiles/me`
+- `PATCH /profiles/me`
+- `GET /admin/profiles`
+- `PATCH /admin/profiles/{employee_id}`
+
+### Attendance
+
+- `POST /attendance/check-in`
+- `POST /attendance/check-out`
+- `GET /attendance/me`
+- `GET /admin/attendance`
+
+### Leaves
+
+- `POST /leaves`
+- `GET /leaves/me`
+- `GET /admin/leaves`
+- `PATCH /admin/leaves/{leave_id}`
+
+### Payroll
+
+- `GET /payroll/me`
+- `GET /admin/payroll`
+- `PATCH /admin/payroll/{employee_id}`
 
 ## Local Development
 
@@ -224,15 +180,33 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
-Backend tests:
+Backend runs at:
 
-```bash
-cd backend
-.venv\Scripts\activate
-pytest
+```text
+http://localhost:8000
 ```
 
-Backend environment variables:
+### Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Frontend runs at:
+
+```text
+http://localhost:5173
+```
+
+Optional frontend environment variable:
+
+```text
+VITE_API_BASE_URL=http://localhost:8000
+```
+
+## Environment Variables
 
 ```text
 APP_NAME=Dayflow HRMS
@@ -244,52 +218,25 @@ ACCESS_TOKEN_EXPIRE_MINUTES=1440
 SEED_DEMO_DATA=true
 ```
 
-Backend health endpoint:
+## Verification
 
-```text
-http://localhost:8000/health
-```
-
-Auth endpoints:
-
-```text
-POST /auth/signup
-POST /auth/login
-GET /users/me
-GET /admin/users/me
-GET /admin/registrations
-PATCH /admin/registrations/{request_id}
-GET /admin/users
-PATCH /admin/users/{employee_id}/role
-PATCH /admin/users/{employee_id}/status
-PATCH /admin/users/{employee_id}/password
-GET /profiles/me
-PATCH /profiles/me
-GET /admin/profiles
-PATCH /admin/profiles/{employee_id}
-POST /attendance/check-in
-POST /attendance/check-out
-GET /attendance/me
-GET /admin/attendance
-POST /leaves
-GET /leaves/me
-GET /admin/leaves
-PATCH /admin/leaves/{leave_id}
-GET /payroll/me
-GET /admin/payroll
-PATCH /admin/payroll/{employee_id}
-```
-
-### Frontend
+Frontend production build:
 
 ```bash
 cd frontend
-npm install
-npm run dev
+npm run build
 ```
 
-Frontend app:
+Backend tests:
 
-```text
-http://localhost:5173
+```bash
+cd backend
+.venv\Scripts\activate
+pytest
 ```
+
+Current verification status:
+
+- Frontend build passes.
+- Backend API test suite passes.
+- Test coverage includes signup approval, login, structured validation errors, authorization, profile restrictions, attendance, leave workflows, payroll updates, and admin account management.
