@@ -95,6 +95,46 @@ Dayflow is a planned Human Resource Management System for the Odoo NMIT hackatho
 - `GET /admin/payroll`
 - `PATCH /admin/payroll/{employee_id}`
 
+## Phase 1 Status
+
+- FastAPI backend foundation added.
+- `GET /health` endpoint added.
+- React + Tailwind frontend foundation added.
+- Frontend reads `VITE_API_BASE_URL` and calls backend health endpoint.
+- Basic frontend loading/error states added.
+
 ## Next Phase
 
-Phase 1 will create the runnable frontend and backend foundation.
+Phase 2 will add database schema and authentication.
+
+## Local Development
+
+### Backend
+
+```bash
+cd backend
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+```
+
+Backend health endpoint:
+
+```text
+http://localhost:8000/health
+```
+
+### Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Frontend app:
+
+```text
+http://localhost:5173
+```
